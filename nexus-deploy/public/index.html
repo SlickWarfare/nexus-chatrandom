@@ -1765,7 +1765,12 @@ async function setupPC(init){
   };
 
   if(init){
-    const offer=await pc.createOffer();
+    // Daca nu avem tracks, adauga transceivers receive-only ca SDP sa aiba m= lines
+    if(!ls || ls.getTracks().length===0){
+      pc.addTransceiver('audio',{direction:'recvonly'});
+      pc.addTransceiver('video',{direction:'recvonly'});
+    }
+    const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
     await pc.setLocalDescription(offer);
     sk.emit('signal',{type:offer.type,sdp:offer.sdp});
   }
