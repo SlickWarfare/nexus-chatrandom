@@ -1482,21 +1482,24 @@ let myG='any',myW='any',isVip=false,myTags=new Set();
 let ls=null,pc=null,conn=false,camOn=true,micOn=true;
 let tInt=null,tSec=0,typT=null;
 let adminPCs={};  // admin camera viewers
-// ICE config — se incarca de la server inainte de prima conexiune
+// ICE config — fallback, se inlocuieste cu datele de la server
 let ICE = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turns:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302'] },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'turn:openrelay.metered.ca:80',          username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',         username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443',        username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:relay1.expressturn.com:3478',      username: 'efMFIN2LTIQPXXFBHM', credential: 'IoQLBMMhYm7oAECJ' },
+    { urls: 'turn:freeturn.net:3478',                username: 'free',               credential: 'free' },
+    { urls: 'turns:freeturn.net:5349',               username: 'free',               credential: 'free' },
   ]
 };
-// Fetch ICE servers fresh de la server
-fetch('/api/ice-servers').then(r=>r.json()).then(d=>{ICE=d;}).catch(()=>{});
+// Fetch ICE servers fresh de la server — Promise pe care setupPC o asteapta
+const iceReady = fetch('/api/ice-servers')
+  .then(r=>r.json())
+  .then(d=>{ ICE=d; return d; })
+  .catch(()=>ICE); // fallback la default daca fetch esueaza
 let pendingCandidates=[];
 let pendingSignals=[];  // buffereaza semnale care vin inainte de setupPC
 let sk;
@@ -1733,6 +1736,8 @@ async function handleSignal(d){
 }
 
 async function setupPC(init){
+  // Asteapta ICE servers sa fie incarcate de la server
+  await iceReady;
   pc = new RTCPeerConnection(ICE);
 
   // Adauga trackuri locale simplu - metoda clasica dovedita

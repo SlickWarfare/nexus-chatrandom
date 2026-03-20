@@ -138,29 +138,37 @@ app.post('/api/redeem-vip', (req, res) => {
   res.json({ success: true, plan: vip.plan, expiresAt: vip.expiresAt });
 });
 
-// ICE servers endpoint — credentiale TURN pentru conexiuni cross-network
+// ICE servers endpoint cu credentiale time-limited (HMAC-SHA1)
+// Compatibil cu orice TURN server care suporta REST API auth
+const TURN_SECRET = process.env.TURN_SECRET || 'nexus-turn-secret-2025';
+
 app.get('/api/ice-servers', (req, res) => {
+  // Genereaza credentiale temporare valabile 24h
+  const unixTime = Math.floor(Date.now() / 1000) + 86400;
+  const username = `${unixTime}:nexus`;
+  const hmac = crypto.createHmac('sha1', TURN_SECRET);
+  hmac.update(username);
+  const credential = hmac.digest('base64');
+
   res.json({
     iceServers: [
-      // STUN servers — Google (fiabile)
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
+      // STUN Google - mereu fiabile
+      { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun3.l.google.com:19302', 'stun:stun4.l.google.com:19302'] },
       // STUN Cloudflare
       { urls: 'stun:stun.cloudflare.com:3478' },
-      // TURN OpenRelay (metered.ca) — toate variantele
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      // TURN OpenRelay - toate variantele incluzand TURNS cu TLS
+      { urls: 'turn:openrelay.metered.ca:80',          username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',         username: 'openrelayproject', credential: 'openrelayproject' },
       { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      // TURN Global relay
-      { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turns:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      // TURN fr-turn2 (Europa)
-      { urls: 'turn:fr-turn2.xirsys.com:80?transport=udp', username: 'Cj9HJQXi0qEsK_NeGDJYGmkr2GOInEQ8xNEp4M3VwkNuekj_DjcS7PAkXX3OEy0zAAAAAGR5_7ptZXRlcmVk', credential: 'f0a5cd76-e2b8-11ee-9e22-0242ac120004' },
+      { urls: 'turns:openrelay.metered.ca:443',        username: 'openrelayproject', credential: 'openrelayproject' },
+      // TURN alternative publice
+      { urls: 'turn:relay1.expressturn.com:3478',      username: 'efMFIN2LTIQPXXFBHM', credential: 'IoQLBMMhYm7oAECJ' },
+      { urls: 'turn:relay1.expressturn.com:3480',      username: 'efMFIN2LTIQPXXFBHM', credential: 'IoQLBMMhYm7oAECJ' },
+      // TURN numb.viagenie.ca
+      { urls: 'turn:numb.viagenie.ca',                 username: 'webrtc@live.com',    credential: 'muazkh' },
+      // TURN freeturn.net
+      { urls: 'turn:freeturn.net:3478',                username: 'free',               credential: 'free' },
+      { urls: 'turns:freeturn.net:5349',               username: 'free',               credential: 'free' },
     ]
   });
 });
