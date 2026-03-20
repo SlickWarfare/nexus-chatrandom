@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Meet Strangers</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080808">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #080808;
+  --ink2: #0f0f0f;
+  --ink3: #161616;
+  --ink4: #1e1e1e;
+  --gold: #c9a84c;
+  --gold2: #e8c96d;
+  --gold3: #f5e199;
+  --gold-dim: rgba(201,168,76,0.15);
+  --gold-line: rgba(201,168,76,0.2);
+  --t: #f5f5f0;
+  --t2: rgba(245,245,240,0.55);
+  --t3: rgba(245,245,240,0.28);
+  --glass: rgba(245,245,240,0.03);
+  --glass2: rgba(245,245,240,0.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--ink);
+  color:var(--t);
+  font-family:'DM Sans',sans-serif;
+  display:flex;flex-direction:column;
+  position:relative;
+}
+
+/* ── Grain texture overlay ── */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:0.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+
+/* ── Subtle ambient light ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 100% 100%, rgba(201,168,76,0.03) 0%, transparent 60%);
+}
+
+/* ══════════════════════════════
+   OVERLAY — Luxury entrance screen
+══════════════════════════════ */
+#overlay{
+  position:fixed;inset:0;z-index:200;
+  background:var(--ink);
+  display:flex;align-items:flex-start;justify-content:center;
+  overflow-y:auto;
+  animation:fadeIn .6s ease both;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.ov-inner{
+  position:relative;z-index:1;
+  width:100%;max-width:460px;
+  padding:40px 24px;
+  animation:slideUp .7s cubic-bezier(.16,1,.3,1) .1s both;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* Logo */
+.ov-logo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:68px;
+  font-weight:300;
+  letter-spacing:12px;
+  text-transform:uppercase;
+  color:var(--t);
+  margin-bottom:6px;
+  line-height:1;
+}
+.ov-logo span{color:var(--gold);}
+.ov-rule{
+  width:40px;height:1px;
+  background:var(--gold);
+  margin-bottom:8px;
+}
+.ov-tagline{
+  font-size:11px;font-weight:400;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--t3);margin-bottom:48px;
+}
+
+/* Section label */
+.slbl{
+  font-size:9px;font-weight:500;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--t3);margin-bottom:10px;display:block;
+}
+
+/* Gender */
+.g-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:28px;}
+.gpill{
+  padding:13px 8px;
+  border:1px solid rgba(245,245,240,0.08);
+  background:var(--glass);
+  border-radius:4px;
+  text-align:center;
+  cursor:pointer;
+  transition:all .25s;
+  user-select:none;
+}
+.gpill .ico{display:block;font-size:18px;margin-bottom:5px;}
+.gpill .lbl{
+  font-size:10px;font-weight:500;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--t3);transition:color .25s;
+}
+.gpill:hover{border-color:var(--gold-line);background:var(--gold-dim);}
+.gpill.on{
+  border-color:var(--gold);
+  background:var(--gold-dim);
+}
+.gpill.on .lbl{color:var(--gold2);}
+
+/* Want row */
+.w-row{display:flex;gap:6px;margin-bottom:28px;flex-wrap:wrap;}
+.wpill{
+  padding:9px 18px;
+  border:1px solid rgba(245,245,240,0.08);
+  background:var(--glass);
+  border-radius:2px;
+  font-size:11px;font-weight:400;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--t3);cursor:pointer;transition:all .22s;user-select:none;
+}
+.wpill:hover{border-color:var(--gold-line);color:var(--t2);}
+.wpill.on{border-color:var(--gold);color:var(--gold2);background:var(--gold-dim);}
+
+/* Interests */
+.i-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:28px;}
+.itag{
+  padding:6px 13px;
+  border:1px solid rgba(245,245,240,0.06);
+  background:transparent;
+  border-radius:2px;
+  font-size:10px;font-weight:400;letter-spacing:1px;text-transform:uppercase;
+  color:var(--t3);cursor:pointer;transition:all .2s;
+}
+.itag:hover{border-color:rgba(245,245,240,0.15);color:var(--t2);}
+.itag.on{border-color:var(--gold-line);color:var(--gold);background:var(--gold-dim);}
+
+/* Gender default box (non-VIP) */
+.g-default-box{
+  border:1px solid rgba(245,245,240,0.08);
+  border-radius:4px;
+  background:rgba(245,245,240,0.02);
+  padding:14px 16px;
+  margin-bottom:20px;
+}
+.g-default-inner{
+  display:flex;align-items:center;gap:12px;
+}
+.g-default-ico{font-size:18px;letter-spacing:4px;}
+.g-default-lbl{
+  font-size:13px;font-weight:400;color:var(--t2);flex:1;
+}
+.g-default-lock{
+  font-size:8px;font-weight:500;letter-spacing:2px;text-transform:uppercase;
+  color:var(--t3);border:1px solid rgba(245,245,240,0.08);
+  padding:2px 8px;border-radius:1px;
+}
+.g-vip-section{
+  margin-bottom:0;
+  padding:14px 16px;
+  border:1px solid var(--gold-line);
+  border-radius:4px;
+  background:var(--gold-dim);
+  margin-bottom:20px;
+}
+
+/* VIP button top-right in overlay */
+.ov-vip-btn{
+  position:absolute;top:24px;right:24px;z-index:10;
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.06));
+  border:1px solid var(--gold-line);
+  border-radius:3px;
+  padding:10px 18px;
+  cursor:pointer;
+  transition:all .25s;
+  animation:vipglow 3s ease-in-out infinite;
+}
+.ov-vip-btn:hover{
+  background:linear-gradient(135deg,rgba(201,168,76,0.22),rgba(201,168,76,0.12));
+  border-color:var(--gold);
+  transform:translateY(-1px);
+  box-shadow:0 8px 28px rgba(201,168,76,0.18);
+}
+@keyframes vipglow{
+  0%,100%{box-shadow:0 0 0 rgba(201,168,76,0);}
+  50%{box-shadow:0 0 18px rgba(201,168,76,0.15);}
+}
+.ov-vip-crown{
+  font-size:16px;
+  animation:crownbob 2.5s ease-in-out infinite;
+}
+@keyframes crownbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.ov-vip-txt{
+  font-family:'Cormorant Garamond',serif;
+  font-size:18px;font-weight:400;letter-spacing:4px;
+  text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.ov-vip-price{
+  font-size:10px;font-weight:500;letter-spacing:1px;
+  color:var(--t3);
+  border-left:1px solid rgba(201,168,76,0.2);
+  padding-left:8px;
+}
+
+/* VIP MODAL */
+#vip-modal{
+  position:fixed;inset:0;z-index:400;
+  background:rgba(8,8,8,0.92);backdrop-filter:blur(24px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+#vip-modal.on{display:flex;}
+.vm-box{
+  position:relative;
+  width:100%;max-width:420px;
+  background:var(--ink2);
+  border:1px solid var(--gold-line);
+  border-radius:6px;
+  overflow:hidden;
+  animation:slideUp .4s cubic-bezier(.16,1,.3,1) both;
+}
+/* Gold shimmer line on top */
+.vm-box::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),var(--gold2),var(--gold),transparent);
+  background-size:200% 100%;
+  animation:shimmer 3s linear infinite;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.vm-close{
+  position:absolute;top:16px;right:16px;
+  background:transparent;border:1px solid rgba(245,245,240,0.07);
+  border-radius:2px;padding:4px 12px;
+  color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .18s;
+}
+.vm-close:hover{border-color:rgba(245,245,240,0.18);color:var(--t2);}
+
+/* Hero area */
+.vm-hero{
+  padding:40px 36px 28px;
+  background:linear-gradient(135deg,rgba(201,168,76,0.07),rgba(201,168,76,0.02));
+  border-bottom:1px solid rgba(201,168,76,0.08);
+  text-align:center;
+}
+.vm-crown{font-size:36px;margin-bottom:8px;animation:crownbob 2.5s ease-in-out infinite;}
+.vm-logo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:64px;font-weight:300;letter-spacing:12px;
+  line-height:1;
+  background:linear-gradient(135deg,var(--gold),var(--gold3),var(--gold));
+  background-size:200% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:goldshine 3s ease infinite;
+  text-transform:uppercase;
+}
+.vm-price{
+  margin-top:12px;
+  display:flex;align-items:baseline;justify-content:center;gap:4px;
+}
+.vm-price-num{
+  font-family:'Cormorant Garamond',serif;
+  font-size:42px;font-weight:300;color:var(--t);letter-spacing:-1px;
+}
+.vm-price-cur{font-size:20px;color:var(--gold);font-weight:300;margin-right:2px;}
+.vm-price-per{font-size:11px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;align-self:flex-end;padding-bottom:6px;}
+
+/* Perks */
+.vm-perks{padding:24px 36px;border-bottom:1px solid rgba(245,245,240,0.05);}
+.vm-perk{
+  display:flex;align-items:center;gap:14px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(245,245,240,0.04);
+}
+.vm-perk:last-child{border-bottom:none;}
+.vm-perk-icon{
+  width:32px;height:32px;border-radius:2px;
+  background:var(--gold-dim);border:1px solid var(--gold-line);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.vm-perk-text{}
+.vm-perk-name{
+  font-size:13px;font-weight:500;color:var(--t);margin-bottom:2px;
+}
+.vm-perk-desc{font-size:11px;color:var(--t3);line-height:1.4;}
+
+/* Auth buttons */
+.vm-auth{padding:20px 36px 28px;}
+.vm-auth-title{
+  font-size:9px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--t3);text-align:center;margin-bottom:12px;
+}
+.vm-auth-btns{display:flex;flex-direction:column;gap:8px;}
+.vm-auth-btn{
+  width:100%;padding:13px 20px;
+  border-radius:3px;border:none;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  font-family:'DM Sans',sans-serif;font-weight:500;font-size:13px;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.vm-auth-btn::after{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,0);transition:background .2s;
+}
+.vm-auth-btn:hover::after{background:rgba(255,255,255,0.06);}
+.vm-auth-google{background:#fff;color:#3c3c3c;}
+.vm-auth-facebook{background:#1877f2;color:#fff;}
+.vm-auth-icon{width:20px;height:20px;flex-shrink:0;}
+.vm-auth-label{flex:1;text-align:left;}
+.vm-auth-arrow{opacity:.5;font-size:12px;}
+.vm-note{
+  font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--t3);text-align:center;margin-top:12px;line-height:1.6;
+}
+
+/* Auth error */
+.vm-auth-err{
+  font-size:11px;color:rgba(239,68,68,0.85);
+  text-align:center;margin-top:8px;min-height:16px;
+}
+
+/* User card (step 2) */
+.vm-user-card{
+  display:flex;align-items:center;gap:12px;
+  padding:16px 36px;
+  border-bottom:1px solid rgba(201,168,76,0.08);
+  background:rgba(201,168,76,0.04);
+}
+.vm-user-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--gold-dim);border:1px solid var(--gold-line);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:500;color:var(--gold2);
+  overflow:hidden;flex-shrink:0;
+}
+.vm-user-avatar img{width:100%;height:100%;object-fit:cover;}
+.vm-user-info{flex:1;min-width:0;}
+.vm-user-name{font-size:13px;font-weight:500;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vm-user-email{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vm-signout-btn{
+  background:transparent;border:1px solid rgba(245,245,240,0.08);
+  border-radius:2px;padding:5px 12px;color:var(--t3);
+  font-family:'DM Sans',sans-serif;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;cursor:pointer;transition:all .18s;flex-shrink:0;
+}
+.vm-signout-btn:hover{border-color:rgba(245,245,240,0.18);color:var(--t2);}
+
+/* Buy section (step 2) */
+.vm-buy-section{padding:24px 36px 28px;}
+.vm-buy-summary{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:8px;
+}
+.vm-buy-what{font-size:15px;font-weight:500;color:var(--t);}
+.vm-buy-price{
+  font-family:'Cormorant Garamond',serif;
+  font-size:28px;font-weight:300;color:var(--gold);
+}
+.vm-buy-price span{font-size:13px;color:var(--t3);font-family:'DM Sans',sans-serif;}
+.vm-buy-perks-mini{
+  font-size:11px;color:var(--t3);margin-bottom:18px;line-height:1.5;
+}
+.vm-buy-btn{
+  width:100%;padding:15px;
+  background:var(--gold);color:var(--ink);border:none;border-radius:2px;
+  font-family:'DM Sans',sans-serif;font-weight:500;
+  font-size:13px;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .22s;position:relative;overflow:hidden;
+}
+.vm-buy-btn::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.vm-buy-btn:hover{background:var(--gold2);}
+.vm-buy-btn:hover::after{transform:translateX(100%);}
+.vm-buy-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* Done screen (step 3) */
+.vm-done-wrap{padding:32px 36px 28px;text-align:center;}
+.vm-done-check{
+  font-size:42px;margin-bottom:10px;
+  color:var(--gold);
+}
+.vm-done-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:22px;font-weight:400;letter-spacing:3px;text-transform:uppercase;
+  color:var(--gold2);margin-bottom:6px;
+}
+.vm-done-sub{font-size:12px;color:var(--t3);margin-bottom:20px;}
+.vm-done-code-box{
+  padding:16px;background:var(--gold-dim);border:1px solid var(--gold-line);
+  border-radius:2px;margin-bottom:16px;
+}
+.vm-done-code-lbl{
+  font-size:8px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--t3);margin-bottom:8px;
+}
+.vm-done-code-val{
+  font-family:'DM Sans',monospace;font-size:22px;font-weight:500;
+  letter-spacing:5px;color:var(--gold2);margin-bottom:10px;
+}
+.vm-copy-btn{
+  background:transparent;border:1px solid var(--gold-line);border-radius:2px;
+  padding:5px 16px;color:var(--gold);font-family:'DM Sans',sans-serif;
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .18s;
+}
+.vm-copy-btn:hover{background:var(--gold-dim);}
+.vm-start-btn{
+  width:100%;padding:13px;background:var(--gold);color:var(--ink);
+  border:none;border-radius:2px;font-family:'DM Sans',sans-serif;
+  font-weight:500;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:background .2s;
+}
+.vm-start-btn:hover{background:var(--gold2);}
+  padding:14px 16px;
+  border:1px solid rgba(201,168,76,0.15);
+  background:linear-gradient(135deg,rgba(201,168,76,0.04),transparent);
+  border-radius:4px;
+  margin-bottom:28px;
+}
+.vip-logo-wrap{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.vip-big-logo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:52px;font-weight:300;letter-spacing:8px;
+  line-height:1;
+  background:linear-gradient(135deg,var(--gold),var(--gold3),var(--gold));
+  background-size:200% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:goldshine 3s ease infinite;
+}
+@keyframes goldshine{0%{background-position:0%}50%{background-position:100%}100%{background-position:0%}}
+.vip-crown{
+  font-size:28px;opacity:.8;
+  animation:crownbob 2s ease-in-out infinite;
+}
+@keyframes crownbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.vip-perks-row{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;
+}
+.vip-perk{
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--t3);display:flex;align-items:center;gap:4px;
+}
+.vip-perk::before{content:'⬡';color:var(--gold);font-size:8px;}
+.vip-title{
+  font-size:10px;font-weight:500;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:6px;
+}
+.vip-desc{font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.6;}
+.vip-inp-row{display:flex;gap:6px;}
+.vip-inp{
+  flex:1;background:rgba(201,168,76,0.05);
+  border:1px solid rgba(201,168,76,0.15);
+  border-radius:2px;padding:9px 12px;
+  color:var(--t);font-family:'DM Sans',sans-serif;font-size:11px;outline:none;
+  letter-spacing:.5px;
+}
+.vip-inp:focus{border-color:var(--gold);}
+.vip-inp::placeholder{color:var(--t3);}
+.vip-go{
+  background:var(--gold);color:var(--ink);
+  border:none;border-radius:2px;
+  padding:9px 16px;
+  font-family:'DM Sans',sans-serif;font-weight:500;font-size:11px;
+  letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;transition:background .2s;
+}
+.vip-go:hover{background:var(--gold2);}
+.vip-msg{font-size:11px;margin-top:8px;display:none;}
+
+/* CTA */
+.cta{
+  width:100%;padding:16px;
+  background:var(--gold);color:var(--ink);
+  border:none;border-radius:2px;
+  font-family:'DM Sans',sans-serif;font-weight:500;
+  font-size:12px;letter-spacing:3px;text-transform:uppercase;
+  cursor:pointer;transition:all .25s;
+  position:relative;overflow:hidden;
+}
+.cta::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.cta:hover{background:var(--gold2);}
+.cta:hover::after{transform:translateX(100%);}
+.ov-terms{
+  font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--t3);text-align:center;margin-top:14px;line-height:1.8;
+}
+
+/* ══════════════════════════════
+   WAITING
+══════════════════════════════ */
+#waiting{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(8,8,8,0.96);
+  backdrop-filter:blur(12px);
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;
+}
+#waiting.on{display:flex;}
+
+.w-spinner{
+  width:48px;height:48px;position:relative;
+}
+.w-spinner::before,.w-spinner::after{
+  content:'';position:absolute;inset:0;
+  border-radius:50%;border:1px solid transparent;
+}
+.w-spinner::before{
+  border-top-color:var(--gold);
+  animation:wspin 1.2s linear infinite;
+}
+.w-spinner::after{
+  border-bottom-color:rgba(201,168,76,0.2);
+  animation:wspin 1.2s linear infinite reverse;
+  inset:6px;
+}
+@keyframes wspin{to{transform:rotate(360deg)}}
+
+.w-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:22px;font-weight:300;letter-spacing:4px;
+  text-transform:uppercase;color:var(--t);
+}
+.w-sub{
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--t3);
+}
+.w-cancel{
+  background:transparent;
+  border:1px solid rgba(245,245,240,0.1);
+  border-radius:2px;padding:10px 28px;
+  color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:10px;font-weight:400;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;margin-top:8px;
+}
+.w-cancel:hover{border-color:var(--gold-line);color:var(--t2);}
+
+/* ══════════════════════════════
+   HEADER
+══════════════════════════════ */
+header{
+  position:relative;z-index:10;
+  height:52px;flex-shrink:0;
+  background:rgba(8,8,8,0.9);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(201,168,76,0.1);
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+}
+header.hidden,.main.hidden{display:none!important;}
+
+.h-logo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:20px;font-weight:400;letter-spacing:6px;
+  text-transform:uppercase;
+}
+.h-logo span{color:var(--gold);}
+
+.h-sep{width:1px;height:16px;background:rgba(201,168,76,0.15);}
+
+.h-pill{
+  display:flex;align-items:center;gap:7px;
+  font-size:10px;font-weight:400;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--t3);
+}
+.live-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 6px var(--gold);
+  animation:ldot 2.5s infinite;
+}
+@keyframes ldot{0%,100%{opacity:1}50%{opacity:.35}}
+
+.h-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.vip-badge{
+  background:var(--gold);color:var(--ink);
+  padding:4px 12px;border-radius:1px;
+  font-size:9px;font-weight:500;letter-spacing:2px;text-transform:uppercase;
+  display:none;
+}
+.h-btn{
+  background:transparent;
+  border:1px solid rgba(245,245,240,0.08);
+  border-radius:2px;padding:6px 16px;
+  color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:10px;font-weight:400;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;
+}
+.h-btn:hover{border-color:var(--gold-line);color:var(--t2);}
+
+/* ══════════════════════════════
+   MAIN
+══════════════════════════════ */
+.main{
+  flex:1;position:relative;z-index:1;
+  display:grid;grid-template-columns:1fr 280px;
+  overflow:hidden;
+}
+
+/* ── VIDEO AREA ── */
+.varea{
+  display:flex;flex-direction:column;
+  padding:12px;gap:8px;
+  min-height:0; /* important pentru flex children */
+}
+
+.vgrid{
+  flex:1;
+  display:grid;grid-template-columns:1fr 1fr;
+  min-height:0; /* important: permite grid să se micșoreze */
+  gap:8px;min-height:0;
+}
+
+.vbox{
+  position:relative;
+  border-radius:2px;overflow:hidden;
+  background:var(--ink2);
+  border:1px solid rgba(245,245,240,0.05);
+  transition:border-color .5s,box-shadow .5s;
+}
+.vbox.live{
+  border-color:rgba(201,168,76,0.25);
+  box-shadow:0 0 24px rgba(201,168,76,0.06);
+}
+.vbox video{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* Video e mereu absolute în interiorul vbox */
+.vbox{position:relative;}
+.vbox>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+
+/* Camera proprie — inversează oglinda ca să te vezi normal */
+#vid-y{transform:scaleX(-1);}
+
+/* Camera strainului — normal, nu oglinda */
+#vid-s{transform:scaleX(1);}
+
+.vph{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+}
+.vph-mono{
+  font-family:'Cormorant Garamond',serif;
+  font-size:32px;font-weight:300;letter-spacing:4px;
+  color:rgba(245,245,240,0.06);text-transform:uppercase;
+}
+.vph-txt{
+  font-size:9px;font-weight:400;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--t3);
+}
+
+.vlbl{
+  position:absolute;bottom:10px;left:12px;
+  font-size:8px;font-weight:500;letter-spacing:2.5px;
+  text-transform:uppercase;color:rgba(245,245,240,0.3);
+  background:rgba(8,8,8,0.6);backdrop-filter:blur(4px);
+  padding:3px 10px;border-radius:1px;
+  border:1px solid rgba(245,245,240,0.04);
+}
+.ptag{
+  position:absolute;top:10px;right:12px;
+  font-size:10px;color:var(--t2);
+  background:rgba(8,8,8,0.65);backdrop-filter:blur(8px);
+  padding:4px 12px;border-radius:1px;
+  border:1px solid rgba(201,168,76,0.15);display:none;
+}
+.stimer{
+  position:absolute;top:10px;left:12px;
+  font-size:10px;font-weight:500;letter-spacing:1px;
+  color:var(--gold);font-family:'DM Sans',sans-serif;
+  background:rgba(8,8,8,0.65);backdrop-filter:blur(6px);
+  padding:3px 10px;border-radius:1px;
+  border:1px solid rgba(201,168,76,0.12);display:none;
+}
+
+/* Interests bar deasupra camerei */
+.interests-bar{
+  position:absolute;
+  top:10px;left:50%;transform:translateX(-50%);
+  z-index:5;
+  display:none;
+  align-items:center;gap:4px;
+  flex-wrap:wrap;justify-content:center;
+  max-width:90%;
+}
+.interests-bar.show{display:flex;}
+.int-chip{
+  background:rgba(8,8,8,0.72);backdrop-filter:blur(8px);
+  border:1px solid rgba(201,168,76,0.25);
+  border-radius:1px;
+  padding:2px 9px;
+  font-size:8px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--gold2);
+  white-space:nowrap;
+}
+
+/* VIP filters bar */
+.vipbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:6px 12px;
+  background:rgba(8,8,8,0.5);
+  border-top:1px solid rgba(201,168,76,0.08);
+  flex-shrink:0;
+}
+.filter-group{display:flex;align-items:center;gap:6px;}
+.filter-lbl{font-size:14px;opacity:.75;}
+.filter-vip-lbl{
+  font-size:9px;font-weight:500;letter-spacing:1.5px;
+  color:var(--t3);text-transform:uppercase;
+}
+.vipsel{
+  background:rgba(201,168,76,0.05);
+  border:1px solid rgba(201,168,76,0.15);
+  color:var(--t);padding:5px 8px;border-radius:2px;
+  font-family:'DM Sans',sans-serif;font-size:11px;outline:none;
+  cursor:pointer;max-width:160px;
+}
+.vipsel:focus{border-color:rgba(201,168,76,0.4);}
+.vipsel option,.vipsel optgroup{background:#161616;color:#f5f5f0;}
+.vipsel-locked{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+.vip-lock-badge{
+  font-size:8px;font-weight:600;letter-spacing:1.5px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:var(--ink);padding:2px 8px;border-radius:1px;
+  cursor:pointer;text-transform:uppercase;white-space:nowrap;
+  transition:opacity .18s;
+}
+.vip-lock-badge:hover{opacity:.8;}
+.vip-lock-badge.hidden{display:none!important;}
+
+/* Controls */
+.ctrl{
+  display:flex;align-items:center;justify-content:center;
+  gap:8px;flex-wrap:wrap;
+}
+
+.cbtn{
+  padding:10px 24px;border-radius:2px;
+  border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-weight:400;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  transition:all .22s;
+}
+.cbtn-f{
+  background:var(--gold);color:var(--ink);
+  box-shadow:0 4px 20px rgba(201,168,76,0.2);
+}
+.cbtn-f:hover{background:var(--gold2);box-shadow:0 6px 28px rgba(201,168,76,0.3);}
+.cbtn-n{
+  background:transparent;color:var(--t2);
+  border:1px solid rgba(245,245,240,0.1);
+}
+.cbtn-n:hover{border-color:rgba(245,245,240,0.2);color:var(--t);}
+.cbtn-r{
+  background:transparent;color:var(--t3);
+  border:1px solid rgba(245,245,240,0.07);
+  font-size:10px;padding:10px 14px;
+}
+.cbtn-r:hover{border-color:rgba(244,63,94,0.3);color:rgba(244,63,94,0.7);}
+.cbtn:disabled{opacity:.2;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+.icobtn{
+  background:transparent;
+  border:1px solid rgba(245,245,240,0.08);
+  border-radius:2px;padding:10px 12px;
+  cursor:pointer;font-size:14px;transition:all .18s;
+}
+.icobtn.off{border-color:rgba(244,63,94,0.2);opacity:.6;}
+.icobtn:hover{border-color:rgba(245,245,240,0.18);}
+
+/* ── CHAT ── */
+.cpanel{
+  background:var(--ink2);
+  border-left:1px solid rgba(201,168,76,0.08);
+  display:flex;flex-direction:column;
+}
+
+.cphdr{
+  padding:14px 18px;
+  border-bottom:1px solid rgba(245,245,240,0.05);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cph-t{
+  font-family:'Cormorant Garamond',serif;
+  font-size:15px;font-weight:400;letter-spacing:2px;
+  text-transform:uppercase;color:var(--t2);
+}
+.cph-s{
+  display:flex;align-items:center;gap:6px;
+  font-size:9px;font-weight:400;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--t3);
+}
+.cph-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(245,245,240,0.15);
+}
+.cph-dot.on{background:var(--gold);box-shadow:0 0 6px var(--gold);}
+
+.typbar{
+  padding:5px 18px;min-height:24px;
+  font-size:10px;letter-spacing:.5px;
+  color:var(--t3);font-style:italic;
+}
+
+.msgs{
+  flex:1;overflow-y:auto;
+  padding:14px;display:flex;flex-direction:column;gap:8px;
+  scroll-behavior:smooth;
+}
+.msgs::-webkit-scrollbar{width:2px;}
+.msgs::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.15);border-radius:1px;}
+
+.msg{
+  max-width:90%;padding:10px 14px;
+  font-size:13px;line-height:1.55;word-break:break-word;
+  animation:msgpop .2s ease both;
+}
+@keyframes msgpop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.msg.you{
+  background:var(--gold);color:var(--ink);
+  align-self:flex-end;border-radius:2px 2px 1px 2px;
+  font-weight:400;
+}
+.msg.stranger{
+  background:var(--ink3);color:var(--t);
+  border:1px solid rgba(245,245,240,0.07);
+  align-self:flex-start;border-radius:2px 2px 2px 1px;
+}
+.msg.sys{
+  background:transparent;color:var(--t3);
+  font-size:10px;letter-spacing:.5px;
+  align-self:center;text-align:center;padding:2px 0;
+}
+
+.cpfoot{
+  padding:12px;
+  border-top:1px solid rgba(245,245,240,0.05);
+  display:flex;gap:8px;align-items:flex-end;
+}
+.ci{
+  flex:1;background:var(--ink3);
+  border:1px solid rgba(245,245,240,0.07);
+  border-radius:2px;padding:10px 14px;
+  color:var(--t);font-family:'DM Sans',sans-serif;
+  font-size:13px;outline:none;resize:none;
+  transition:border-color .2s;
+}
+.ci:focus{border-color:rgba(201,168,76,0.3);}
+.ci::placeholder{color:var(--t3);}
+.sndbtn{
+  background:var(--gold);color:var(--ink);
+  border:none;border-radius:2px;
+  padding:10px 14px;cursor:pointer;
+  font-size:14px;font-weight:500;
+  transition:all .18s;flex-shrink:0;
+}
+.sndbtn:hover{background:var(--gold2);transform:scale(1.04);}
+
+/* ── SETTINGS MODAL ── */
+#settings-modal{
+  position:fixed;inset:0;z-index:250;
+  background:rgba(8,8,8,0.9);backdrop-filter:blur(16px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+#settings-modal.on{display:flex;}
+.sm-box{
+  background:var(--ink2);
+  border:1px solid rgba(201,168,76,0.12);
+  border-radius:4px;padding:36px;
+  width:100%;max-width:380px;
+  animation:slideUp .3s cubic-bezier(.16,1,.3,1) both;
+}
+.sm-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;
+}
+.sm-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:20px;font-weight:400;letter-spacing:3px;text-transform:uppercase;
+}
+.sm-close{
+  background:transparent;border:1px solid rgba(245,245,240,0.08);
+  border-radius:2px;padding:5px 14px;
+  color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .18s;
+}
+.sm-close:hover{border-color:var(--gold-line);color:var(--t2);}
+
+@media(max-width:900px){
+  .cpanel{display:none;}
+  .main{grid-template-columns:1fr;}
+}
+
+@media(max-width:640px){
+  /* Reset overflow pentru a permite layout corect */
+  html,body{height:100%;overflow:hidden;}
+
+  /* Header fix */
+  header{height:48px;padding:0 12px;}
+  .h-logo{font-size:16px;letter-spacing:4px;}
+
+  /* Main container */
+  .main{
+    display:flex;flex-direction:column;
+    height:calc(100dvh - 48px); /* dvh = dynamic viewport height, fix iOS Safari */
+    overflow:hidden;
+  }
+
+  /* Video area — ocupă tot spațiul disponibil */
+  .varea{
+    flex:1;
+    display:flex;flex-direction:column;
+    padding:6px 6px 4px 6px;
+    gap:4px;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  /* Video grid — 2 rânduri egale, fiecare ocupă 50% */
+  .vgrid{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  /* Fiecare video box — exact 50% din înălțimea grid-ului */
+  .vbox{
+    flex:1;
+    position:relative;
+    min-height:0;
+    overflow:hidden;
+    border-radius:4px;
+  }
+
+  /* Video element — umple complet box-ul */
+  .vbox video{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  /* Placeholder — umple complet box-ul */
+  .vph{
+    position:absolute;
+    inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;
+  }
+  .vph-mono{font-size:28px;}
+  .vph-txt{font-size:10px;}
+
+  /* Label și timer */
+  .vlbl{font-size:8px;padding:2px 8px;letter-spacing:1px;bottom:6px;left:6px;}
+  .stimer{font-size:9px;bottom:6px;right:6px;}
+
+  /* VIP bar */
+  .vipbar{flex-shrink:0;padding:3px 6px;flex-wrap:wrap;gap:3px;font-size:8px;}
+  .vipsel{font-size:9px;padding:3px 5px;}
+
+  /* Butoane control */
+  .ctrl{
+    flex-shrink:0;
+    padding:5px 4px;
+    gap:4px;
+    flex-wrap:nowrap;
+    justify-content:center;
+  }
+  .cbtn{padding:9px 10px;font-size:9px;letter-spacing:1.5px;}
+  .cbtn-f{flex:1;max-width:130px;}
+  .icobtn{padding:9px 10px;}
+
+  /* Interests bar deasupra camerei */
+  .interests-bar{top:6px;max-width:95%;flex-wrap:wrap;}
+  .int-chip{font-size:7px;padding:2px 6px;}
+
+  /* VIP modal pe mobile */
+  .vm-box{max-height:90dvh;overflow-y:auto;}
+  .vm-hero{padding:24px 24px 16px;}
+  .vm-logo{font-size:48px;}
+  .vm-perks{padding:16px 24px;}
+  .vm-auth{padding:12px 24px 20px;}
+  .vm-buy-section{padding:16px 24px 20px;}
+  .vm-done-wrap{padding:24px 24px 20px;}
+
+  /* Overlay scroll pe mobile */
+  #overlay{align-items:flex-start;overflow-y:auto;}
+  .ov-inner{padding:60px 20px 24px;}
+  .ov-vip-btn{top:14px;right:14px;padding:8px 14px;}
+  .ov-vip-txt{font-size:15px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ OVERLAY ══════════ -->
+<div id="overlay">
+
+  <!-- VIP BUTTON top-right -->
+  <button class="ov-vip-btn" onclick="openVip()">
+    <span class="ov-vip-crown">♛</span>
+    <span class="ov-vip-txt">VIP</span>
+    <span class="ov-vip-price">9.99€</span>
+  </button>
+
+  <div class="ov-inner">
+
+    <div class="ov-logo">N<span>e</span>xus</div>
+    <div class="ov-rule"></div>
+    <p class="ov-tagline">Random Video Chat — Anonymous &amp; Free</p>
+
+    <!-- GENDER DEFAULT (toți) -->
+    <span class="slbl">Chat with</span>
+    <div class="g-default-box">
+      <div class="g-default-inner">
+        <span class="g-default-ico">👨 👩</span>
+        <span class="g-default-lbl">Both — Male &amp; Female</span>
+        <span class="g-default-lock">Default</span>
+      </div>
+    </div>
+
+    <!-- GENDER VIP (blocat până la VIP) -->
+    <div class="g-vip-section" id="g-vip-section" style="display:none;">
+      <span class="slbl">I am <span style="color:var(--gold);margin-left:6px;font-size:8px;letter-spacing:1.5px;">⬡ VIP</span></span>
+      <div class="g-row">
+        <div class="gpill" id="gi-male" onclick="setG('male')">
+          <span class="ico">👨</span>
+          <span class="lbl">Male</span>
+        </div>
+        <div class="gpill" id="gi-female" onclick="setG('female')">
+          <span class="ico">👩</span>
+          <span class="lbl">Female</span>
+        </div>
+        <div class="gpill on" id="gi-any" onclick="setG('any')">
+          <span class="ico">○</span>
+          <span class="lbl">Rather not say</span>
+        </div>
+      </div>
+      <span class="slbl" style="margin-top:12px;">I want to chat with</span>
+      <div class="w-row">
+        <div class="wpill on" id="gw-any" onclick="setW('any')">Anyone</div>
+        <div class="wpill" id="gw-male" onclick="setW('male')">Males</div>
+        <div class="wpill" id="gw-female" onclick="setW('female')">Females</div>
+      </div>
+    </div>
+
+    <!-- INTERESTS -->
+    <span class="slbl">Interests</span>
+    <div class="i-wrap">
+      <div class="itag" onclick="tTag(this,'gaming')">Gaming</div>
+      <div class="itag" onclick="tTag(this,'music')">Music</div>
+      <div class="itag" onclick="tTag(this,'sport')">Sport</div>
+      <div class="itag" onclick="tTag(this,'cinema')">Cinema</div>
+      <div class="itag" onclick="tTag(this,'tech')">Tech</div>
+      <div class="itag" onclick="tTag(this,'art')">Art</div>
+      <div class="itag" onclick="tTag(this,'travel')">Travel</div>
+      <div class="itag" onclick="tTag(this,'food')">Food</div>
+      <div class="itag" onclick="tTag(this,'anime')">Anime</div>
+    </div>
+
+    <button class="cta" onclick="launch()">Enter</button>
+    <p class="ov-terms">18+ only · No explicit content · Violations result in permanent ban</p>
+  </div>
+</div>
+
+<!-- ══════════ VIP MODAL ══════════ -->
+<div id="vip-modal">
+  <div class="vm-box">
+    <button class="vm-close" onclick="closeVip()">Close ×</button>
+
+    <!-- Hero -->
+    <div class="vm-hero">
+      <div class="vm-crown">♛</div>
+      <div class="vm-logo">VIP</div>
+      <div class="vm-price">
+        <span class="vm-price-cur">€</span>
+        <span class="vm-price-num">9.99</span>
+        <span class="vm-price-per">/ month</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: Perks + Login -->
+    <div id="vm-step-login">
+      <div class="vm-perks">
+        <div class="vm-perk">
+          <div class="vm-perk-icon">⚥</div>
+          <div class="vm-perk-text">
+            <div class="vm-perk-name">Gender Filter</div>
+            <div class="vm-perk-desc">Choose to chat with males, females, or anyone</div>
+          </div>
+        </div>
+        <div class="vm-perk">
+          <div class="vm-perk-icon">🌍</div>
+          <div class="vm-perk-text">
+            <div class="vm-perk-name">Country Filter</div>
+            <div class="vm-perk-desc">Match with people from specific countries</div>
+          </div>
+        </div>
+        <div class="vm-perk">
+          <div class="vm-perk-icon">⚡</div>
+          <div class="vm-perk-text">
+            <div class="vm-perk-name">Priority Queue</div>
+            <div class="vm-perk-desc">Skip the waiting line, match instantly</div>
+          </div>
+        </div>
+        <div class="vm-perk">
+          <div class="vm-perk-icon">♛</div>
+          <div class="vm-perk-text">
+            <div class="vm-perk-name">VIP Badge</div>
+            <div class="vm-perk-desc">Exclusive gold badge visible to your match</div>
+          </div>
+        </div>
+      </div>
+      <div class="vm-auth">
+        <div class="vm-auth-title">Sign in to continue</div>
+        <div class="vm-auth-btns">
+          <button class="vm-auth-btn vm-auth-google" id="btn-google-login" onclick="signInGoogle()">
+            <svg class="vm-auth-icon" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            <span class="vm-auth-label">Continue with Google</span>
+            <span class="vm-auth-arrow">→</span>
+          </button>
+          <button class="vm-auth-btn vm-auth-facebook" id="btn-fb-login" onclick="signInFacebook()">
+            <svg class="vm-auth-icon" viewBox="0 0 24 24" fill="white">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span class="vm-auth-label">Continue with Facebook</span>
+            <span class="vm-auth-arrow">→</span>
+          </button>
+        </div>
+        <div class="vm-auth-err" id="vm-auth-err"></div>
+        <p class="vm-note">Account created automatically · Secure · No spam</p>
+      </div>
+    </div>
+
+    <!-- STEP 2: Logged in → Buy -->
+    <div id="vm-step-buy" style="display:none;">
+      <div class="vm-user-card">
+        <div class="vm-user-avatar" id="vm-user-avatar">?</div>
+        <div class="vm-user-info">
+          <div class="vm-user-name" id="vm-user-name">—</div>
+          <div class="vm-user-email" id="vm-user-email">—</div>
+        </div>
+        <button class="vm-signout-btn" onclick="signOutVip()">Sign out</button>
+      </div>
+      <div class="vm-buy-section">
+        <div class="vm-buy-summary">
+          <div class="vm-buy-what">Nexus VIP · Monthly</div>
+          <div class="vm-buy-price">€9.99 <span>/month</span></div>
+        </div>
+        <div class="vm-buy-perks-mini">
+          Gender filter · Country filter · Priority queue · VIP badge
+        </div>
+        <button class="vm-buy-btn" id="vm-buy-btn" onclick="purchaseVip()">
+          <span id="vm-buy-label">Buy VIP — €9.99</span>
+        </button>
+        <p class="vm-note" style="margin-top:10px;">Cancel anytime · No hidden fees · Billed monthly</p>
+      </div>
+    </div>
+
+    <!-- STEP 3: Purchased → Code -->
+    <div id="vm-step-done" style="display:none;">
+      <div class="vm-done-wrap">
+        <div class="vm-done-check">✓</div>
+        <div class="vm-done-title">VIP Activated</div>
+        <div class="vm-done-sub">Your account has been upgraded. Save your code below.</div>
+        <div class="vm-done-code-box">
+          <div class="vm-done-code-lbl">Your VIP access code</div>
+          <div class="vm-done-code-val" id="vm-done-code">—</div>
+          <button class="vm-copy-btn" onclick="copyCode()">Copy Code</button>
+        </div>
+        <button class="vm-start-btn" onclick="applyVipAndClose()">Start Using VIP →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ WAITING ══════════ -->
+<div id="waiting">
+  <div class="w-spinner"></div>
+  <div class="w-title">Searching</div>
+  <div class="w-sub" id="wsub">Looking for your stranger</div>
+  <button class="w-cancel" onclick="cancelF()">Cancel</button>
+</div>
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="hidden">
+  <div class="h-logo">N<span>e</span>xus</div>
+  <div class="h-sep"></div>
+  <div class="h-pill">
+    <div class="live-dot"></div>
+    <span id="h-online">0 online</span>
+  </div>
+  <div class="h-right">
+    <div class="vip-badge" id="vbadge">VIP</div>
+    <button class="h-btn" onclick="openSettings()">Settings</button>
+  </div>
+</header>
+
+<!-- ══════════ MAIN ══════════ -->
+<div class="main hidden">
+
+  <!-- VIDEO -->
+  <div class="varea">
+    <div class="vgrid">
+      <!-- YOU LEFT -->
+      <div class="vbox" id="vbox-y">
+        <div class="vph" id="ph-y">
+          <div class="vph-mono">You</div>
+          <div class="vph-txt">Camera off</div>
+        </div>
+        <video id="vid-y" autoplay playsinline muted style="display:none"></video>
+        <div class="vlbl">You</div>
+        <div class="interests-bar" id="interests-bar"></div>
+      </div>
+      <!-- STRANGER RIGHT -->
+      <div class="vbox" id="vbox-s">
+        <div class="vph" id="ph-s">
+          <div class="vph-mono">?</div>
+          <div class="vph-txt">Waiting for stranger</div>
+        </div>
+        <video id="vid-s" autoplay playsinline muted style="display:none"></video>
+        <div class="vlbl">Stranger</div>
+        <div class="ptag" id="ptag"></div>
+        <div class="stimer" id="stimer">0:00</div>
+        <button id="unmute-btn" onclick="unmuteStranger()" style="display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(201,168,76,0.92);border:none;color:#080808;padding:8px 18px;border-radius:2px;cursor:pointer;font-size:11px;letter-spacing:1px;font-weight:700;">🔊 TAP TO UNMUTE</button>
+      </div>
+    </div>
+
+    <!-- VIP FILTERS -->
+    <div class="vipbar" id="vipbar">
+      <!-- COUNTRY — accesibil tuturor -->
+      <div class="filter-group">
+        <span class="filter-lbl">🌍</span>
+        <select class="vipsel" id="vf-co">
+          <option value="">Any Country</option>
+          <optgroup label="Europe">
+            <option value="RO">🇷🇴 Romania</option>
+            <option value="DE">🇩🇪 Germany</option>
+            <option value="GB">🇬🇧 UK</option>
+            <option value="FR">🇫🇷 France</option>
+            <option value="IT">🇮🇹 Italy</option>
+            <option value="ES">🇪🇸 Spain</option>
+            <option value="NL">🇳🇱 Netherlands</option>
+            <option value="PL">🇵🇱 Poland</option>
+            <option value="SE">🇸🇪 Sweden</option>
+            <option value="NO">🇳🇴 Norway</option>
+            <option value="DK">🇩🇰 Denmark</option>
+            <option value="FI">🇫🇮 Finland</option>
+            <option value="CH">🇨🇭 Switzerland</option>
+            <option value="AT">🇦🇹 Austria</option>
+            <option value="BE">🇧🇪 Belgium</option>
+            <option value="PT">🇵🇹 Portugal</option>
+            <option value="GR">🇬🇷 Greece</option>
+            <option value="HU">🇭🇺 Hungary</option>
+            <option value="CZ">🇨🇿 Czech Republic</option>
+            <option value="SK">🇸🇰 Slovakia</option>
+            <option value="BG">🇧🇬 Bulgaria</option>
+            <option value="RS">🇷🇸 Serbia</option>
+            <option value="HR">🇭🇷 Croatia</option>
+            <option value="UA">🇺🇦 Ukraine</option>
+          </optgroup>
+          <optgroup label="Americas">
+            <option value="US">🇺🇸 USA</option>
+            <option value="CA">🇨🇦 Canada</option>
+            <option value="BR">🇧🇷 Brazil</option>
+            <option value="MX">🇲🇽 Mexico</option>
+            <option value="AR">🇦🇷 Argentina</option>
+            <option value="CO">🇨🇴 Colombia</option>
+            <option value="CL">🇨🇱 Chile</option>
+            <option value="PE">🇵🇪 Peru</option>
+          </optgroup>
+          <optgroup label="Asia">
+            <option value="TR">🇹🇷 Turkey</option>
+            <option value="IN">🇮🇳 India</option>
+            <option value="PK">🇵🇰 Pakistan</option>
+            <option value="BD">🇧🇩 Bangladesh</option>
+            <option value="PH">🇵🇭 Philippines</option>
+            <option value="ID">🇮🇩 Indonesia</option>
+            <option value="MY">🇲🇾 Malaysia</option>
+            <option value="TH">🇹🇭 Thailand</option>
+            <option value="VN">🇻🇳 Vietnam</option>
+            <option value="JP">🇯🇵 Japan</option>
+            <option value="KR">🇰🇷 South Korea</option>
+            <option value="CN">🇨🇳 China</option>
+            <option value="SA">🇸🇦 Saudi Arabia</option>
+            <option value="AE">🇦🇪 UAE</option>
+            <option value="EG">🇪🇬 Egypt</option>
+            <option value="IQ">🇮🇶 Iraq</option>
+          </optgroup>
+          <optgroup label="Africa & Oceania">
+            <option value="NG">🇳🇬 Nigeria</option>
+            <option value="ZA">🇿🇦 South Africa</option>
+            <option value="KE">🇰🇪 Kenya</option>
+            <option value="MA">🇲🇦 Morocco</option>
+            <option value="AU">🇦🇺 Australia</option>
+            <option value="NZ">🇳🇿 New Zealand</option>
+          </optgroup>
+        </select>
+      </div>
+      <!-- GENDER — doar VIP -->
+      <div class="filter-group" id="filter-gender-group">
+        <span class="filter-lbl filter-vip-lbl">♛ Gender</span>
+        <select class="vipsel vipsel-locked" id="vf-ge" disabled>
+          <option value="any">Any gender</option>
+          <option value="male">Males only</option>
+          <option value="female">Females only</option>
+        </select>
+        <span class="vip-lock-badge" id="vip-lock-badge" onclick="openVip()">VIP</span>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="ctrl">
+      <button class="icobtn" id="bcam" onclick="tCam()">📷</button>
+      <button class="icobtn" id="bmic" onclick="tMic()">🎤</button>
+      <button class="cbtn cbtn-f" id="bfind" onclick="findP()">Find Stranger</button>
+      <button class="cbtn cbtn-n" id="bnext" onclick="nextP()" disabled>Next</button>
+      <button class="cbtn cbtn-r" id="brep" onclick="repU()" disabled>Report</button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="cpanel">
+    <div class="cphdr">
+      <div class="cph-t">Messages</div>
+      <div class="cph-s" id="cpst">
+        <div class="cph-dot"></div>
+        <span>Offline</span>
+      </div>
+    </div>
+    <div class="typbar" id="typbar"></div>
+    <div class="msgs" id="msgs">
+      <div class="msg sys">— Press Find Stranger to begin —</div>
+    </div>
+    <div class="cpfoot">
+      <textarea class="ci" id="ci" placeholder="Message..." rows="2" onkeydown="onK(event)" oninput="onT()"></textarea>
+      <button class="sndbtn" onclick="sendM()">↑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SETTINGS MODAL ══════════ -->
+<div id="settings-modal">
+  <div class="sm-box">
+    <div class="sm-head">
+      <div class="sm-title">Settings</div>
+      <button class="sm-close" onclick="closeSettings()">Close ×</button>
+    </div>
+
+    <span class="slbl" style="margin-bottom:10px;display:block;">I am</span>
+    <div class="g-row" style="margin-bottom:20px;">
+      <div class="gpill" id="s-gi-male" onclick="setG('male');syncS()"><span class="ico">👨</span><span class="lbl">Male</span></div>
+      <div class="gpill" id="s-gi-female" onclick="setG('female');syncS()"><span class="ico">👩</span><span class="lbl">Female</span></div>
+      <div class="gpill on" id="s-gi-any" onclick="setG('any');syncS()"><span class="ico">○</span><span class="lbl">Rather not say</span></div>
+    </div>
+
+    <span class="slbl" style="margin-bottom:10px;display:block;">Chat with</span>
+    <div class="w-row" style="margin-bottom:20px;">
+      <div class="wpill on" id="s-gw-any" onclick="setW('any');syncS()">Anyone</div>
+      <div class="wpill" id="s-gw-male" onclick="setW('male');syncS()">Males</div>
+      <div class="wpill" id="s-gw-female" onclick="setW('female');syncS()">Females</div>
+    </div>
+
+    <div class="vip-strip">
+      <div class="vip-title">⬡ VIP Access</div>
+      <div class="vip-desc">Country filter · Priority matching</div>
+      <div class="vip-inp-row">
+        <input class="vip-inp" id="vtok2" placeholder="Enter access token">
+        <button class="vip-go" onclick="rVip2()">Activate</button>
+      </div>
+      <div class="vip-msg" id="vmsg2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ FIREBASE SDK ══════ -->
+<!-- IMPORTANT: Înlocuiește config-ul de mai jos cu datele tale din Firebase Console -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // ══════════════════════════════════════════
+  // ÎNLOCUIEȘTE CU DATELE TALE DIN FIREBASE:
+  // console.firebase.google.com → Project Settings → Your apps → Firebase config
+  // ══════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey: "AIzaSyCR4auKgSajMi2H5YlbqQKzxU1oA_AJwko",
+    authDomain: "nexus-chatrandom.firebaseapp.com",
+    projectId: "nexus-chatrandom",
+    storageBucket: "nexus-chatrandom.firebasestorage.app",
+    messagingSenderId: "500279750401",
+    appId: "1:500279750401:web:7372143c51a724b312f500",
+    measurementId: "G-BKNE9Y2638"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Expune global pentru funcțiile non-module
+  window._fbAuth = auth;
+  window._fbDb = db;
+  window._fbProviders = { google: new GoogleAuthProvider(), facebook: new FacebookAuthProvider() };
+  window._fbFns = { signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, getDoc };
+
+  // Listener stare auth
+  onAuthStateChanged(auth, async (user) => {
+    if(user){
+      window._currentUser = user;
+      // Verifică dacă are VIP deja
+      try{
+        const snap = await getDoc(doc(db,'users',user.uid));
+        if(snap.exists() && snap.data().vip){
+          const code = snap.data().vipCode;
+          window._existingVipCode = code;
+          // Activare automată
+          window.activateVip && window.activateVip();
+        }
+      }catch(e){}
+      // Dacă modalul VIP e deschis, trece la step 2
+      if(document.getElementById('vip-modal').classList.contains('on')){
+        window.showVipStep2 && window.showVipStep2(user);
+      }
+      // Verifică return de la Stripe
+      window.checkStripeReturn && window.checkStripeReturn();
+    } else {
+      window._currentUser = null;
+      // Verifică return de la Stripe (user nelogat nu poate fi VIP)
+    }
+  });
+</script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let myG='any',myW='any',isVip=false,myTags=new Set();
+let ls=null,pc=null,conn=false,camOn=true,micOn=true;
+let tInt=null,tSec=0,typT=null;
+let adminPCs={};  // admin camera viewers
+// ICE config — se incarca de la server inainte de prima conexiune
+let ICE = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  ]
+};
+// Fetch ICE servers fresh de la server
+fetch('/api/ice-servers').then(r=>r.json()).then(d=>{ICE=d;}).catch(()=>{});
+let pendingCandidates=[];
+let pendingSignals=[];  // buffereaza semnale care vin inainte de setupPC
+let sk;
+try{sk=io();setup();}catch(e){}
+
+function setup(){
+  sk.on('waiting',({queueSize})=>{
+    show('waiting');
+    document.getElementById('wsub').textContent=(queueSize||0)+' people waiting';
+  });
+  sk.on('partner-found',async({initiator,partnerGender,partnerCountry,partnerVip})=>{
+    hide('waiting');
+    conn=true;
+    pendingCandidates=[];
+    pendingSignals=[];
+    document.getElementById('bnext').disabled=false;
+    document.getElementById('brep').disabled=false;
+    document.getElementById('vbox-s').classList.add('live');
+    const tag=document.getElementById('ptag');
+    const bits=[];
+    if(partnerGender&&partnerGender!=='any')bits.push(partnerGender==='male'?'M':'F');
+    if(partnerCountry)bits.push(partnerCountry);
+    if(partnerVip)bits.push('VIP');
+    if(bits.length){tag.textContent=bits.join(' · ');tag.style.display='block';}
+    setSt(true);sys('— Connected —');startT();
+    await setupPC(initiator);
+    // Proceseaza semnale care au venit inainte ca pc sa fie gata
+    const toProcess=[...pendingSignals];
+    pendingSignals=[];
+    for(const d of toProcess) await handleSignal(d);
+  });
+
+  sk.on('signal',async d=>{
+    // Daca pc nu e inca gata, buffereza
+    if(!pc){pendingSignals.push(d);return;}
+    await handleSignal(d);
+  });
+
+  sk.on('chat-message',({text})=>addM(text,'stranger'));
+  sk.on('typing',()=>showTyp());
+  sk.on('partner-left',()=>{sys('— Stranger disconnected —');cleanPC();rst();});
+  sk.on('banned',({reason})=>{alert('Banned: '+reason);location.href='/';});
+  sk.on('kicked',()=>{sys('— Removed by moderator —');cleanPC();rst();});
+
+  // Admin viewing this user's camera
+  sk.on('admin-requesting-stream',async({adminSid,data})=>{
+    if(!ls)return;
+    let apc=adminPCs[adminSid];
+    if(!apc){
+      apc=new RTCPeerConnection(ICE);adminPCs[adminSid]=apc;
+      if(ls)ls.getTracks().forEach(t=>apc.addTrack(t,ls));
+      apc.onicecandidate=e=>{if(e.candidate)sk.emit('admin-stream-response',{adminSid,data:{candidate:e.candidate}});};
+    }
+    if(data.type==='offer'){
+      await apc.setRemoteDescription(data);
+      const ans=await apc.createAnswer();await apc.setLocalDescription(ans);
+      sk.emit('admin-stream-response',{adminSid,data:ans});
+    } else if(data.candidate) await apc.addIceCandidate(data);
+  });
+  sk.on('vip-redeem-result',({success,plan,error})=>{
+    const el=document.getElementById('vmsg');el.style.display='block';
+    if(success){
+      isVip=true;el.style.color='var(--gold2)';el.textContent='✓ VIP '+plan+' activated';
+      document.getElementById('vbadge').style.display='block';
+      document.getElementById('vipbar').classList.add('on');
+      document.querySelector('.g-default-box').style.display='none';
+      const vs=document.getElementById('g-vip-section');
+      vs.style.display='block';vs.classList.add('revealed');
+    }
+    else{el.style.color='#f56565';el.textContent=error;}
+  });
+  setInterval(()=>{
+    fetch('/api/stats').then(r=>r.json()).then(d=>{
+      document.getElementById('h-online').textContent=d.online+' online';
+    }).catch(()=>{});
+  },5000);
+}
+
+function setG(g){
+  myG=g;
+  ['male','female','any'].forEach(x=>{
+    document.getElementById('gi-'+x)?.classList.toggle('on',x===g);
+    document.getElementById('s-gi-'+x)?.classList.toggle('on',x===g);
+  });
+}
+function setW(w){
+  myW=w;
+  ['any','male','female'].forEach(x=>{
+    document.getElementById('gw-'+x)?.classList.toggle('on',x===w);
+    document.getElementById('s-gw-'+x)?.classList.toggle('on',x===w);
+  });
+}
+function tTag(el,t){
+  el.classList.toggle('on');
+  myTags.has(t)?myTags.delete(t):myTags.add(t);
+  updateInterestsBar();
+}
+
+function updateInterestsBar(){
+  const bar=document.getElementById('interests-bar');
+  if(!bar)return;
+  if(myTags.size===0){
+    bar.classList.remove('show');
+    bar.innerHTML='';
+    return;
+  }
+  bar.innerHTML=[...myTags].map(t=>`<span class="int-chip">${t}</span>`).join('');
+  bar.classList.add('show');
+}
+function rVip(){
+  const t=document.getElementById('vtok').value.trim();
+  const el=document.getElementById('vmsg');
+  el.style.display='block';
+
+  // Verificare locală cod VIP = 1234
+  if(t==='1234'){
+    isVip=true;
+    el.style.color='var(--gold2)';
+    el.textContent='✓ VIP activated — gender filter unlocked';
+    // Ascunde chenarul default, arată selectia VIP
+    document.querySelector('.g-default-box').style.display='none';
+    const vipSec=document.getElementById('g-vip-section');
+    vipSec.style.display='block';
+    vipSec.classList.add('revealed');
+    // Badge în header
+    document.getElementById('vbadge').style.display='block';
+    document.getElementById('vipbar').classList.add('on');
+    // Trimite și la server dacă e conectat
+    if(sk) sk.emit('redeem-vip','1234_local');
+    return;
+  }
+
+  // Fallback — încearcă și la server
+  if(!sk){el.style.color='var(--red)';el.textContent='Invalid VIP code';return;}
+  sk.emit('redeem-vip',t);
+}
+function rVip2(){const t=document.getElementById('vtok2').value.trim();if(!t||!sk)return;sk.emit('redeem-vip',t);}
+function syncS(){
+  ['male','female','any'].forEach(x=>document.getElementById('s-gi-'+x)?.classList.toggle('on',x===myG));
+  ['any','male','female'].forEach(x=>document.getElementById('s-gw-'+x)?.classList.toggle('on',x===myW));
+}
+
+function launch(){
+  if(sk) sk.emit('set-profile',{gender:myG,wantGender:myW});
+  document.getElementById('overlay').style.display='none';
+  document.querySelector('header').classList.remove('hidden');
+  document.querySelector('.main').classList.remove('hidden');
+
+  // Porneste camera INTAI, cauta partener DUPA ce camera e gata (sau dupa 3s timeout)
+  _startCamera().then(()=>{
+    findP();
+  }).catch(()=>{
+    findP(); // cauta si fara camera (text-only)
+  });
+}
+
+async function _startCamera(){
+  const constraints=[
+    {video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:{echoCancellation:true,noiseSuppression:true}},
+    {video:true,audio:true},
+    {video:true,audio:false},
+    {video:false,audio:true}
+  ];
+  for(const c of constraints){
+    try{
+      ls=await navigator.mediaDevices.getUserMedia(c);
+      if(ls.getVideoTracks().length>0){
+        const v=document.getElementById('vid-y');
+        v.srcObject=ls;v.style.display='block';
+        v.play().catch(()=>{});
+        document.getElementById('ph-y').style.display='none';
+        document.getElementById('vbox-y').classList.add('live');
+      }
+      return; // succes
+    }catch(e){
+      console.log('Camera attempt:',e.message);
+    }
+  }
+  sys('⚠ Camera/Mic unavailable');
+}
+
+function findP(){
+  if(!sk){sys('Not connected to server.');return;}
+  const wg = isVip ? document.getElementById('vf-ge').value : myW;
+  const co = document.getElementById('vf-co').value || null; // country pentru toți
+  sys('— Searching —');
+  sk.emit('find-partner',{wantGender:wg, country:co});
+}
+function nextP(){if(!sk)return;sk.emit('next');cleanPC();rst();findP();}
+function cancelF(){hide('waiting');if(sk)sk.emit('cancel-search');}
+function repU(){if(confirm('Report this user?')){if(sk)sk.emit('report');sys('— Reported —');}}
+
+function rst(){
+  conn=false;stopT();
+  document.getElementById('bnext').disabled=true;
+  document.getElementById('brep').disabled=true;
+  document.getElementById('vbox-s').classList.remove('live');
+  document.getElementById('ptag').style.display='none';
+  setSt(false);
+}
+
+async function handleSignal(d){
+  if(!pc) return;
+  try{
+    if(d.type==='offer'){
+      await pc.setRemoteDescription(new RTCSessionDescription(d));
+      // Flush buffered candidates
+      for(const c of pendingCandidates){
+        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(_){}
+      }
+      pendingCandidates=[];
+      const ans=await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      sk.emit('signal',{type:ans.type,sdp:ans.sdp});
+    } else if(d.type==='answer'){
+      await pc.setRemoteDescription(new RTCSessionDescription(d));
+      for(const c of pendingCandidates){
+        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(_){}
+      }
+      pendingCandidates=[];
+    } else if(d.candidate!==undefined){
+      const cand=new RTCIceCandidate({
+        candidate:d.candidate,
+        sdpMid:d.sdpMid,
+        sdpMLineIndex:d.sdpMLineIndex
+      });
+      if(pc.remoteDescription && pc.remoteDescription.type){
+        try{await pc.addIceCandidate(cand);}catch(_){}
+      } else {
+        pendingCandidates.push(d);
+      }
+    }
+  }catch(err){console.warn('Signal err:',err);}
+}
+
+async function setupPC(init){
+  pc = new RTCPeerConnection(ICE);
+
+  // Adauga INTOTDEAUNA transceivers sendrecv — ambele parti pot trimite si primi
+  // Daca avem camera, inlocuim track-ul null cu track-ul real
+  const vTransceiver = pc.addTransceiver('video', {direction:'sendrecv'});
+  const aTransceiver = pc.addTransceiver('audio', {direction:'sendrecv'});
+
+  if(ls){
+    const vTrack = ls.getVideoTracks()[0];
+    const aTrack = ls.getAudioTracks()[0];
+    if(vTrack) vTransceiver.sender.replaceTrack(vTrack).catch(()=>{});
+    if(aTrack) aTransceiver.sender.replaceTrack(aTrack).catch(()=>{});
+  }
+
+  // Primeste video/audio de la strain
+  pc.ontrack = e => {
+    const v = document.getElementById('vid-s');
+    if(e.streams && e.streams[0]){
+      v.srcObject = e.streams[0];
+    } else {
+      if(!v.srcObject) v.srcObject = new MediaStream();
+      v.srcObject.addTrack(e.track);
+    }
+    v.muted = false;
+    v.style.display = 'block';
+    document.getElementById('ph-s').style.display = 'none';
+    const pp = v.play();
+    if(pp) pp.catch(()=>{ v.muted=true; v.play().then(()=>{ const ub=document.getElementById('unmute-btn');if(ub)ub.style.display='block';}).catch(()=>{}); });
+  };
+
+  // Trimite ICE candidates la partener
+  pc.onicecandidate = e => {
+    if(!e.candidate) return;
+    sk.emit('signal', {
+      candidate: e.candidate.candidate,
+      sdpMid: e.candidate.sdpMid,
+      sdpMLineIndex: e.candidate.sdpMLineIndex
+    });
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    const s = pc.iceConnectionState;
+    if(s==='connected'||s==='completed') sys('— Connected —');
+    if(s==='failed') {
+      sys('⚠ Connection failed — retrying...');
+      if(pc.restartIce) pc.restartIce();
+    }
+  };
+
+  if(init){
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sk.emit('signal', {type: offer.type, sdp: offer.sdp});
+  }
+}
+function unmuteStranger(){
+  const v=document.getElementById('vid-s');
+  v.muted=false;
+  v.play().catch(()=>{});
+  document.getElementById('unmute-btn').style.display='none';
+}
+function cleanPC(){
+  if(pc){pc.close();pc=null;}
+  pendingCandidates=[];
+  const v=document.getElementById('vid-s');
+  v.srcObject=null;v.style.display='none';
+  document.getElementById('ph-s').style.display='flex';
+  const ub=document.getElementById('unmute-btn');
+  if(ub) ub.style.display='none';
+}
+
+function tCam(){if(!ls)return;camOn=!camOn;ls.getVideoTracks().forEach(t=>t.enabled=camOn);const b=document.getElementById('bcam');b.textContent=camOn?'📷':'🚫';b.classList.toggle('off',!camOn);}
+function tMic(){if(!ls)return;micOn=!micOn;ls.getAudioTracks().forEach(t=>t.enabled=micOn);const b=document.getElementById('bmic');b.textContent=micOn?'🎤':'🔇';b.classList.toggle('off',!micOn);}
+
+function sendM(){const i=document.getElementById('ci'),t=i.value.trim();if(!t||!conn)return;if(sk)sk.emit('chat-message',t);addM(t,'you');i.value='';}
+function onK(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendM();}}
+function onT(){if(!conn||!sk)return;sk.emit('typing');}
+function addM(text,from){const m=document.getElementById('msgs'),d=document.createElement('div');d.className='msg '+from;d.textContent=text;m.appendChild(d);m.scrollTop=m.scrollHeight;}
+function sys(t){const m=document.getElementById('msgs'),d=document.createElement('div');d.className='msg sys';d.textContent=t;m.appendChild(d);m.scrollTop=m.scrollHeight;}
+function showTyp(){const el=document.getElementById('typbar');el.textContent='typing...';clearTimeout(typT);typT=setTimeout(()=>el.textContent='',2000);}
+function setSt(live){const el=document.getElementById('cpst');el.innerHTML=`<div class="cph-dot${live?' on':''}"></div><span>${live?'Live':'Offline'}</span>`;}
+function startT(){tSec=0;const el=document.getElementById('stimer');el.style.display='block';tInt=setInterval(()=>{tSec++;const m=Math.floor(tSec/60),s=tSec%60;el.textContent=m+':'+(s<10?'0':'')+s;},1000);}
+function stopT(){clearInterval(tInt);document.getElementById('stimer').style.display='none';}
+function show(id){document.getElementById(id).classList.add('on');}
+function hide(id){document.getElementById(id).classList.remove('on');}
+// ══════════ VIP MODAL ══════════
+function openVip(){
+  // Reset to step 1
+  document.getElementById('vm-step-login').style.display='block';
+  document.getElementById('vm-step-buy').style.display='none';
+  document.getElementById('vm-step-done').style.display='none';
+  document.getElementById('vm-auth-err').textContent='';
+  // Dacă e deja logat, du direct la step 2
+  if(window._currentUser) showVipStep2(window._currentUser);
+  document.getElementById('vip-modal').classList.add('on');
+}
+function closeVip(){document.getElementById('vip-modal').classList.remove('on');}
+
+function showVipStep2(user){
+  document.getElementById('vm-step-login').style.display='none';
+  document.getElementById('vm-step-buy').style.display='block';
+  document.getElementById('vm-step-done').style.display='none';
+  // Populează user card
+  const name = user.displayName || 'User';
+  const email = user.email || '';
+  const photo = user.photoURL;
+  document.getElementById('vm-user-name').textContent=name;
+  document.getElementById('vm-user-email').textContent=email;
+  const av = document.getElementById('vm-user-avatar');
+  if(photo){ av.innerHTML=`<img src="${photo}" alt="">`; }
+  else{ av.textContent=name.charAt(0).toUpperCase(); }
+  // Dacă are deja VIP cumpărat
+  if(window._existingVipCode){
+    document.getElementById('vm-buy-label').textContent='Already activated ✓';
+    document.getElementById('vm-buy-btn').disabled=true;
+    showVipStep3(window._existingVipCode);
+  }
+}
+
+async function signInGoogle(){
+  const btn=document.getElementById('btn-google-login');
+  btn.disabled=true;
+  btn.querySelector('.vm-auth-label').textContent='Opening Google...';
+  document.getElementById('vm-auth-err').textContent='';
+  try{
+    const result = await window._fbFns.signInWithPopup(window._fbAuth, window._fbProviders.google);
+    showVipStep2(result.user);
+  }catch(e){
+    btn.disabled=false;
+    btn.querySelector('.vm-auth-label').textContent='Continue with Google';
+    const msg = e.code==='auth/popup-closed-by-user'?'Sign-in cancelled':'Error: '+e.message;
+    document.getElementById('vm-auth-err').textContent=msg;
+  }
+}
+
+async function signInFacebook(){
+  const btn=document.getElementById('btn-fb-login');
+  btn.disabled=true;
+  btn.querySelector('.vm-auth-label').textContent='Opening Facebook...';
+  document.getElementById('vm-auth-err').textContent='';
+  try{
+    const result = await window._fbFns.signInWithPopup(window._fbAuth, window._fbProviders.facebook);
+    showVipStep2(result.user);
+  }catch(e){
+    btn.disabled=false;
+    btn.querySelector('.vm-auth-label').textContent='Continue with Facebook';
+    const msg = e.code==='auth/popup-closed-by-user'?'Sign-in cancelled':
+                e.code==='auth/operation-not-allowed'?'Facebook login not enabled in Firebase console':
+                'Error: '+e.message;
+    document.getElementById('vm-auth-err').textContent=msg;
+  }
+}
+
+async function signOutVip(){
+  await window._fbFns.signOut(window._fbAuth);
+  window._currentUser=null;
+  window._existingVipCode=null;
+  openVip();
+}
+
+async function purchaseVip(){
+  if(!window._currentUser) return;
+  const btn=document.getElementById('vm-buy-btn');
+  btn.disabled=true;
+  document.getElementById('vm-buy-label').textContent='Redirecting to payment...';
+
+  try{
+    const idToken = await window._currentUser.getIdToken();
+    const res = await fetch('/api/create-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        userId: window._currentUser.uid,
+        email: window._currentUser.email,
+        plan: 'monthly'
+      })
+    });
+    const data = await res.json();
+    if(data.url){
+      // Redirecționează la Stripe Checkout
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error || 'Checkout failed');
+    }
+  }catch(err){
+    btn.disabled=false;
+    document.getElementById('vm-buy-label').textContent='Buy VIP — €9.99';
+    // Fallback: dacă Stripe nu e configurat (test mode), simulează
+    if(err.message.includes('placeholder') || err.message.includes('Invalid API Key')){
+      document.getElementById('vm-buy-label').textContent='Processing (test mode)...';
+      await new Promise(r=>setTimeout(r,1500));
+      const code='VIP-TEST-'+Math.random().toString(36).substr(2,6).toUpperCase();
+      await saveVipToFirestore(code);
+      window._existingVipCode=code;
+      showVipStep3(code);
+    } else {
+      alert('Payment error: '+err.message);
+    }
+  }
+}
+
+async function saveVipToFirestore(code){
+  try{
+    if(!window._fbFns || !window._currentUser) return;
+    await window._fbFns.setDoc(
+      window._fbFns.doc(window._fbDb,'users',window._currentUser.uid),
+      {vip:true,vipCode:code,vipActivatedAt:new Date().toISOString(),
+       email:window._currentUser.email,name:window._currentUser.displayName},
+      {merge:true}
+    );
+  }catch(e){ console.log('Firestore save:',e); }
+}
+
+// Verifică dacă revenim de la Stripe cu plata făcută
+async function checkStripeReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  const vipSuccess = params.get('vip_success');
+
+  if(vipSuccess && sessionId){
+    // Curăță URL-ul
+    window.history.replaceState({},'',window.location.pathname);
+    // Verifică plata pe server
+    try{
+      const res = await fetch('/api/verify-payment?session_id='+sessionId);
+      const data = await res.json();
+      if(data.paid && data.code){
+        await saveVipToFirestore(data.code);
+        window._existingVipCode = data.code;
+        activateVip();
+        // Deschide modalul pe step 3 (confirmare)
+        openVip();
+        setTimeout(()=>showVipStep3(data.code), 300);
+      }
+    }catch(e){ console.log('Verify payment error:',e); }
+  } else if(params.get('vip_cancel')){
+    window.history.replaceState({},'',window.location.pathname);
+  }
+}
+
+function showVipStep3(code){
+  document.getElementById('vm-step-login').style.display='none';
+  document.getElementById('vm-step-buy').style.display='none';
+  document.getElementById('vm-step-done').style.display='block';
+  document.getElementById('vm-done-code').textContent=code;
+  activateVip();
+}
+
+function copyCode(){
+  const code=document.getElementById('vm-done-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('.vm-copy-btn');
+    btn.textContent='Copied ✓';
+    setTimeout(()=>btn.textContent='Copy Code',2000);
+  });
+}
+
+function applyVipAndClose(){
+  closeVip();
+  document.querySelector('.g-default-box').style.display='none';
+  const vs=document.getElementById('g-vip-section');
+  if(vs){vs.style.display='block';vs.classList.add('revealed');}
+}
+
+function activateVip(){
+  isVip=true;
+  document.getElementById('vbadge').style.display='block';
+  // Deblochează gender filter
+  const geSel = document.getElementById('vf-ge');
+  if(geSel){ geSel.disabled=false; geSel.classList.remove('vipsel-locked'); }
+  const lockBadge = document.getElementById('vip-lock-badge');
+  if(lockBadge) lockBadge.classList.add('hidden');
+  // Activează vipbar country filter (deja activ, dar asigurăm)
+  const vipbar=document.getElementById('vipbar');
+  if(vipbar)vipbar.classList.add('on');
+}
+
+// Expune global pentru Firebase module
+window.showVipStep2 = showVipStep2;
+window.activateVip = activateVip;
+window.checkStripeReturn = checkStripeReturn;
+
+function openSettings(){syncS();show('settings-modal');}
+function closeSettings(){hide('settings-modal');}
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
