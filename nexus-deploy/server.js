@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -28,6 +29,90 @@ const VIP_PLANS = {
   monthly: { price: 9.99, days: 30, label: 'Monthly' },
   yearly:  { price: 59.99, days: 365, label: 'Yearly' }
 };
+
+// ============================================================
+// STRIPE PAYMENT ENDPOINTS
+// ============================================================
+
+// Create Stripe Checkout Session
+app.post('/api/create-checkout', async (req, res) => {
+  const { userId, email, plan = 'monthly' } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  const prices = {
+    monthly: { amount: 999, interval: 'month' },
+    yearly:  { amount: 5999, interval: 'year' }
+  };
+  const p = prices[plan] || prices.monthly;
+  const host = req.headers.origin || `https://${req.headers.host}`;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: email || undefined,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          unit_amount: p.amount,
+          product_data: {
+            name: `Nexus VIP — ${plan === 'yearly' ? 'Annual' : 'Monthly'}`,
+            description: 'Gender filter · Country filter · Priority queue · VIP badge',
+            images: []
+          }
+        },
+        quantity: 1
+      }],
+      metadata: { userId, plan },
+      success_url: `${host}/?vip_success=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${host}/?vip_cancel=1`
+    });
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    console.error('Stripe error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify payment after redirect
+app.get('/api/verify-payment', async (req, res) => {
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    if (session.payment_status === 'paid') {
+      const code = 'VIP-' + session.metadata.userId.substr(0,4).toUpperCase() +
+                   '-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      res.json({
+        paid: true,
+        userId: session.metadata.userId,
+        plan: session.metadata.plan,
+        code
+      });
+    } else {
+      res.json({ paid: false });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Stripe Webhook (pentru confirmare server-side)
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) return res.json({ received: true });
+  try {
+    const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      console.log('✅ Payment confirmed for userId:', session.metadata?.userId);
+    }
+    res.json({ received: true });
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
 
 // ============================================================
 // VIP TOKEN API (in productie conectezi Stripe/PayPal aici)
@@ -130,11 +215,27 @@ io.on('connection', (socket) => {
   // === FIND PARTNER ===
   socket.on('find-partner', ({ wantGender, country } = {}) => {
     const myInfo = userInfo.get(socket.id);
+    if (!myInfo) return;
+
+    // Scoate din queue dacă era deja acolo
+    const existingIdx = waitingUsers.findIndex(u => u.socketId === socket.id);
+    if (existingIdx !== -1) waitingUsers.splice(existingIdx, 1);
+
+    // Dacă era deja în pereche activă, deconectează partenerul
+    disconnectPartner(socket.id);
 
     // Update prefs
     if (wantGender) myInfo.wantGender = wantGender;
     if (country !== undefined) myInfo.country = country;
     userInfo.set(socket.id, myInfo);
+
+    // Curăță utilizatorii disconnectați din queue înainte de matching
+    for (let i = waitingUsers.length - 1; i >= 0; i--) {
+      const u = waitingUsers[i];
+      if (!io.sockets.sockets.has(u.socketId)) {
+        waitingUsers.splice(i, 1);
+      }
+    }
 
     // Find matching partner
     let partnerIdx = -1;
@@ -142,6 +243,9 @@ io.on('connection', (socket) => {
     for (let i = 0; i < waitingUsers.length; i++) {
       const candidate = waitingUsers[i];
       if (candidate.socketId === socket.id) continue;
+
+      // Verifică că socket-ul partenerului e activ
+      if (!io.sockets.sockets.has(candidate.socketId)) continue;
 
       const candidateInfo = userInfo.get(candidate.socketId);
       if (!candidateInfo) continue;
@@ -189,13 +293,15 @@ io.on('connection', (socket) => {
 
       broadcastAdminStats();
     } else {
+      // Adaugă în queue dacă nu e deja acolo
       if (!waitingUsers.find(u => u.socketId === socket.id)) {
         waitingUsers.push({
           socketId: socket.id,
           gender: myInfo.gender,
           wantGender: myInfo.wantGender,
           country: myInfo.country,
-          vip: myInfo.vip
+          vip: myInfo.vip,
+          joinedAt: Date.now()
         });
       }
       socket.emit('waiting', { queueSize: waitingUsers.length });
@@ -318,8 +424,24 @@ function getVipTokenList() {
   }));
 }
 
-const PORT = process.env.PORT || 3000;
+// ============================================================
+// QUEUE CLEANUP — curăță utilizatorii disconnectați din queue
+// ============================================================
+setInterval(() => {
+  const before = waitingUsers.length;
+  for (let i = waitingUsers.length - 1; i >= 0; i--) {
+    if (!io.sockets.sockets.has(waitingUsers[i].socketId)) {
+      waitingUsers.splice(i, 1);
+    }
+  }
+  if (waitingUsers.length !== before) {
+    broadcastAdminStats();
+  }
+}, 5000); // la fiecare 5 secunde
+
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`✅ Server: http://localhost:${PORT}`);
   console.log(`🛡️  Admin: http://localhost:${PORT}/admin.html`);
 });
+
