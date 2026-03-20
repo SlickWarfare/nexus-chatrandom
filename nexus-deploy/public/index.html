@@ -1735,16 +1735,9 @@ async function handleSignal(d){
 async function setupPC(init){
   pc = new RTCPeerConnection(ICE);
 
-  // Adauga INTOTDEAUNA transceivers sendrecv — ambele parti pot trimite si primi
-  // Daca avem camera, inlocuim track-ul null cu track-ul real
-  const vTransceiver = pc.addTransceiver('video', {direction:'sendrecv'});
-  const aTransceiver = pc.addTransceiver('audio', {direction:'sendrecv'});
-
-  if(ls){
-    const vTrack = ls.getVideoTracks()[0];
-    const aTrack = ls.getAudioTracks()[0];
-    if(vTrack) vTransceiver.sender.replaceTrack(vTrack).catch(()=>{});
-    if(aTrack) aTransceiver.sender.replaceTrack(aTrack).catch(()=>{});
+  // Adauga trackuri locale simplu - metoda clasica dovedita
+  if(ls && ls.getTracks().length > 0){
+    ls.getTracks().forEach(t => pc.addTrack(t, ls));
   }
 
   // Primeste video/audio de la strain
@@ -1760,10 +1753,10 @@ async function setupPC(init){
     v.style.display = 'block';
     document.getElementById('ph-s').style.display = 'none';
     const pp = v.play();
-    if(pp) pp.catch(()=>{ v.muted=true; v.play().then(()=>{ const ub=document.getElementById('unmute-btn');if(ub)ub.style.display='block';}).catch(()=>{}); });
+    if(pp) pp.catch(()=>{ v.muted=true; v.play().then(()=>{ const ub=document.getElementById('unmute-btn');if(ub)ub.style.display='block'; }).catch(()=>{}); });
   };
 
-  // Trimite ICE candidates la partener
+  // Trimite ICE candidates
   pc.onicecandidate = e => {
     if(!e.candidate) return;
     sk.emit('signal', {
@@ -1776,14 +1769,15 @@ async function setupPC(init){
   pc.oniceconnectionstatechange = () => {
     const s = pc.iceConnectionState;
     if(s==='connected'||s==='completed') sys('— Connected —');
-    if(s==='failed') {
-      sys('⚠ Connection failed — retrying...');
-      if(pc.restartIce) pc.restartIce();
-    }
+    if(s==='failed' && pc.restartIce) pc.restartIce();
   };
 
   if(init){
-    const offer = await pc.createOffer();
+    // Initiator: creeaza offer cu optiuni explicite pentru receive
+    const offer = await pc.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true
+    });
     await pc.setLocalDescription(offer);
     sk.emit('signal', {type: offer.type, sdp: offer.sdp});
   }
