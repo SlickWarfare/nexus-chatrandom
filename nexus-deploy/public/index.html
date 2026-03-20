@@ -1738,6 +1738,11 @@ async function setupPC(init){
   // Adauga trackuri locale simplu - metoda clasica dovedita
   if(ls && ls.getTracks().length > 0){
     ls.getTracks().forEach(t => pc.addTrack(t, ls));
+  } else {
+    // FARA CAMERA: adauga transceivers recvonly
+    // Fara astea SDP-ul e gol si partenerul nu poate trimite video
+    pc.addTransceiver('video', {direction: 'recvonly'});
+    pc.addTransceiver('audio', {direction: 'recvonly'});
   }
 
   // Primeste video/audio de la strain
