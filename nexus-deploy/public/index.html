@@ -1495,8 +1495,6 @@ const ICE={
     {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'e6d2a8b8e1abaa520e22def9',credential:'HCmDqVwHaIQxbH7I'}
   ],
   iceCandidatePoolSize:10
-};,
-  iceCandidatePoolSize:10
 };
 let pendingCandidates=[];
 let sk;
@@ -1658,15 +1656,26 @@ function syncS(){
 
 async function launch(){
   try{
-    ls=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    ls=await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+    });
     const v=document.getElementById('vid-y');v.srcObject=ls;v.style.display='block';
     document.getElementById('ph-y').style.display='none';
     document.getElementById('vbox-y').classList.add('live');
-  }catch(e){sys('Camera unavailable — text only');}
+  }catch(e){
+    // Fallback fără video dacă camera nu e disponibilă
+    try{
+      ls=await navigator.mediaDevices.getUserMedia({video:false,audio:true});
+    }catch(e2){}
+    sys('Camera unavailable — text only');
+  }
   if(sk)sk.emit('set-profile',{gender:myG,wantGender:myW});
   document.getElementById('overlay').style.display='none';
   document.querySelector('header').classList.remove('hidden');
   document.querySelector('.main').classList.remove('hidden');
+  // AUTO-FIND: caută automat un partener imediat după intrare
+  setTimeout(()=>findP(), 300);
 }
 
 function findP(){
