@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#080808;--ink2:#0f0f0f;--ink3:#161616;--ink4:#1e1e1e;
+  --gold:#c9a84c;--gold2:#e8c96d;--gold-dim:rgba(201,168,76,0.1);--gold-line:rgba(201,168,76,0.18);
+  --t:#f5f5f0;--t2:rgba(245,245,240,0.55);--t3:rgba(245,245,240,0.25);
+  --red:rgba(239,68,68,0.85);--red-dim:rgba(239,68,68,0.08);--red-line:rgba(239,68,68,0.22);
+  --grn:rgba(16,185,129,0.85);--grn-dim:rgba(16,185,129,0.08);--grn-line:rgba(16,185,129,0.22);
+  --orn:rgba(249,115,22,0.85);--orn-dim:rgba(249,115,22,0.08);--orn-line:rgba(249,115,22,0.22);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{height:100%;}
+body{background:var(--ink);color:var(--t);font-family:'DM Sans',sans-serif;min-height:100%;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 50% 25% at 50% 0%,rgba(201,168,76,0.04),transparent 70%);}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.12);border-radius:1px;}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:200;background:var(--ink);
+  display:flex;align-items:center;justify-content:center;}
+.lb{position:relative;z-index:1;width:100%;max-width:320px;padding:0 20px;
+  animation:sup .5s cubic-bezier(.16,1,.3,1) both;}
+@keyframes sup{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.ll{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;
+  letter-spacing:10px;text-transform:uppercase;margin-bottom:3px;}
+.ll span{color:var(--gold);}
+.lr{width:28px;height:1px;background:var(--gold);margin-bottom:5px;}
+.ls{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--t3);margin-bottom:34px;}
+.li-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:7px;display:block;}
+.li{width:100%;background:var(--ink3);border:1px solid rgba(245,245,240,0.07);border-radius:2px;
+  padding:12px;color:var(--t);font-family:'DM Sans',sans-serif;font-size:14px;
+  letter-spacing:3px;outline:none;margin-bottom:10px;text-align:center;transition:border-color .2s;}
+.li:focus{border-color:var(--gold-line);}
+.li::placeholder{letter-spacing:1px;color:var(--t3);}
+.lbtn{width:100%;padding:13px;background:var(--gold);color:var(--ink);border:none;border-radius:2px;
+  font-family:'DM Sans',sans-serif;font-weight:500;font-size:11px;letter-spacing:3px;
+  text-transform:uppercase;cursor:pointer;transition:background .2s;}
+.lbtn:hover{background:var(--gold2);}
+.lerr{font-size:10px;letter-spacing:1px;color:var(--red);text-align:center;margin-top:8px;display:none;line-height:1.5;}
+
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1;}
+#app.on{display:flex;}
+
+/* Header */
+.ah{height:52px;background:rgba(8,8,8,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--gold-line);
+  display:flex;align-items:center;padding:0 24px;gap:14px;
+  position:sticky;top:0;z-index:100;}
+.ah-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;letter-spacing:5px;text-transform:uppercase;}
+.ah-logo span{color:var(--gold);}
+.ah-sep{width:1px;height:15px;background:var(--gold-line);}
+.ah-tag{background:var(--gold-dim);border:1px solid var(--gold-line);border-radius:1px;
+  padding:3px 10px;font-size:8px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);}
+.ah-r{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);animation:lp 2.5s infinite;}
+@keyframes lp{0%,100%{opacity:1}50%{opacity:.3}}
+.ah-online{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);}
+.ah-logout{background:transparent;border:1px solid rgba(245,245,240,0.07);border-radius:2px;
+  padding:5px 14px;color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.ah-logout:hover{border-color:var(--red-line);color:var(--red);}
+
+/* Content */
+.ac{padding:22px;flex:1;display:flex;flex-direction:column;gap:18px;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+.sc{background:var(--ink2);border:1px solid rgba(245,245,240,0.06);border-radius:2px;
+  padding:16px 18px;transition:border-color .2s;}
+.sc:hover{border-color:var(--gold-line);}
+.sc.hi{border-color:var(--gold-line);background:var(--gold-dim);}
+.sc-l{font-size:8px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:7px;}
+.sc-v{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;line-height:1;}
+.sc-v.gd{color:var(--gold);} .sc-v.gr{color:var(--grn);} .sc-v.rd{color:var(--red);}
+.sc-s{font-size:10px;color:var(--t3);margin-top:4px;}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid rgba(245,245,240,0.06);}
+.tab{padding:11px 22px;cursor:pointer;font-size:10px;font-weight:400;letter-spacing:2px;
+  text-transform:uppercase;color:var(--t3);border-bottom:1px solid transparent;
+  margin-bottom:-1px;transition:all .2s;}
+.tab:hover{color:var(--t2);}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold);}
+.tp{display:none;padding-top:18px;}
+.tp.on{display:block;}
+
+/* Section header */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.st{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;letter-spacing:2px;text-transform:uppercase;color:var(--t2);}
+.sc2{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);}
+.view-sel{background:var(--ink3);border:1px solid rgba(245,245,240,0.08);
+  color:var(--t2);padding:5px 10px;border-radius:2px;font-size:10px;letter-spacing:1px;outline:none;}
+
+/* PARTICIPANT CARDS */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
+.pcard{background:var(--ink2);border:1px solid rgba(245,245,240,0.06);border-radius:3px;
+  overflow:hidden;transition:border-color .2s;animation:cp .2s ease both;}
+@keyframes cp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pcard:hover{border-color:rgba(245,245,240,0.12);}
+.pcard.flagged{border-color:var(--red-line);}
+
+/* Camera area */
+.cw{position:relative;aspect-ratio:16/9;background:var(--ink3);cursor:pointer;overflow:hidden;}
+.cw video{width:100%;height:100%;object-fit:cover;display:block;}
+.cph{width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;}
+.cph-sym{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;
+  letter-spacing:4px;color:rgba(245,245,240,0.05);text-transform:uppercase;}
+.cph-txt{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
+.cv-overlay{position:absolute;inset:0;background:rgba(8,8,8,0);transition:background .2s;
+  display:flex;align-items:center;justify-content:center;opacity:0;}
+.cw:hover .cv-overlay{opacity:1;background:rgba(8,8,8,0.5);}
+.cv-btn{background:rgba(201,168,76,0.9);color:var(--ink);padding:7px 18px;border-radius:1px;
+  font-size:8px;font-weight:500;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;}
+.c-badge{position:absolute;top:7px;left:9px;background:rgba(8,8,8,0.7);
+  backdrop-filter:blur(4px);padding:2px 8px;border-radius:1px;
+  font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(245,245,240,0.35);
+  border:1px solid rgba(245,245,240,0.05);}
+.c-stat{position:absolute;top:7px;right:9px;background:rgba(8,8,8,0.7);
+  backdrop-filter:blur(4px);padding:2px 9px;border-radius:1px;
+  font-size:8px;letter-spacing:1px;text-transform:uppercase;
+  border:1px solid rgba(245,245,240,0.05);display:flex;align-items:center;gap:4px;}
+.sdot{width:4px;height:4px;border-radius:50%;}
+.sdot.active{background:var(--grn);box-shadow:0 0 5px var(--grn);}
+.sdot.waiting{background:var(--gold);box-shadow:0 0 5px var(--gold);}
+.sdot.idle{background:rgba(245,245,240,0.15);}
+.c-timer{position:absolute;bottom:7px;left:9px;background:rgba(8,8,8,0.7);
+  backdrop-filter:blur(4px);padding:2px 8px;border-radius:1px;
+  font-size:9px;font-weight:500;color:var(--gold);
+  border:1px solid rgba(201,168,76,0.1);}
+
+/* Card body */
+.pcb{padding:11px 13px;}
+.pcb-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.pcb-ip{font-family:'DM Sans',monospace;font-size:10px;color:var(--t3);}
+.pcb-tags{display:flex;gap:3px;flex-wrap:wrap;}
+.pcb-meta{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-bottom:9px;}
+.pm{font-size:10px;color:var(--t3);}
+.pm strong{color:var(--t2);font-weight:500;}
+.pc-actions{display:flex;gap:5px;}
+.abtn{flex:1;padding:7px;border-radius:1px;background:transparent;
+  border:1px solid rgba(245,245,240,0.07);color:var(--t3);font-family:'DM Sans',sans-serif;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .18s;text-align:center;}
+.abtn:hover{border-color:rgba(245,245,240,0.15);color:var(--t2);}
+.abtn.view{border-color:var(--gold-line);color:var(--gold);}
+.abtn.view:hover{background:var(--gold-dim);}
+.abtn.kick{border-color:var(--orn-line);color:var(--orn);}
+.abtn.kick:hover{background:var(--orn-dim);}
+.abtn.ban{border-color:var(--red-line);color:var(--red);}
+.abtn.ban:hover{background:var(--red-dim);}
+
+/* Badges */
+.bdg{display:inline-block;padding:2px 7px;border-radius:1px;
+  font-size:7px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;}
+.b-active{background:var(--grn-dim);border:1px solid var(--grn-line);color:var(--grn);}
+.b-waiting{background:var(--gold-dim);border:1px solid var(--gold-line);color:var(--gold);}
+.b-idle{background:rgba(245,245,240,0.03);border:1px solid rgba(245,245,240,0.08);color:var(--t3);}
+.b-vip{background:var(--gold-dim);border:1px solid var(--gold-line);color:var(--gold2);}
+.b-rep{background:var(--red-dim);border:1px solid var(--red-line);color:var(--red);}
+.b-used{background:var(--grn-dim);border:1px solid var(--grn-line);color:var(--grn);}
+.b-free{background:rgba(245,245,240,0.03);border:1px solid rgba(245,245,240,0.07);color:var(--t3);}
+
+/* Table view */
+.tw{background:var(--ink2);border:1px solid rgba(245,245,240,0.06);border-radius:2px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{border-bottom:1px solid rgba(245,245,240,0.06);}
+th{padding:10px 14px;text-align:left;font-size:8px;font-weight:500;
+  letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
+tbody tr{border-bottom:1px solid rgba(245,245,240,0.03);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(245,245,240,0.015);}
+td{padding:11px 14px;color:var(--t2);vertical-align:middle;}
+td.mn{font-family:'DM Sans',monospace;font-size:10px;color:var(--t3);}
+
+/* Empty */
+.empty{padding:44px;text-align:center;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
+
+/* Reports */
+.rcard{background:var(--ink2);border:1px solid var(--red-line);border-radius:2px;
+  padding:13px 16px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-bottom:7px;animation:sup .2s ease both;}
+.ri{font-size:12px;color:var(--t2);}
+.rm{font-size:10px;color:var(--t3);margin-top:2px;}
+.ra{display:flex;gap:5px;}
+
+/* VIP gen */
+.vgb{background:var(--ink2);border:1px solid var(--gold-line);border-radius:2px;
+  padding:20px;margin-bottom:16px;background:linear-gradient(135deg,rgba(201,168,76,0.04),var(--ink2));}
+.vgt{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;
+  letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:4px;}
+.vgs{font-size:11px;color:var(--t3);margin-bottom:13px;}
+.vgr{display:flex;gap:7px;flex-wrap:wrap;}
+.vgsel{background:rgba(201,168,76,0.05);border:1px solid var(--gold-line);
+  color:var(--t);padding:9px 13px;border-radius:2px;
+  font-family:'DM Sans',sans-serif;font-size:11px;outline:none;}
+.vgbtn{background:var(--gold);color:var(--ink);border:none;border-radius:2px;
+  padding:9px 20px;font-family:'DM Sans',sans-serif;font-weight:500;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background .2s;}
+.vgbtn:hover{background:var(--gold2);}
+.vgres{margin-top:11px;padding:11px 13px;background:var(--gold-dim);
+  border:1px solid var(--gold-line);border-radius:1px;display:none;}
+.vgrl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;}
+.vgrc{font-family:'DM Sans',monospace;font-size:12px;color:var(--gold2);letter-spacing:2px;word-break:break-all;}
+.vgrm{font-size:10px;color:var(--t3);margin-top:3px;}
+
+/* CAMERA MODAL */
+#cam-modal{position:fixed;inset:0;z-index:500;background:rgba(8,8,8,0.96);
+  backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;padding:20px;}
+#cam-modal.on{display:flex;}
+.cm-close{position:absolute;top:18px;right:22px;background:transparent;
+  border:1px solid rgba(245,245,240,0.1);border-radius:2px;padding:6px 16px;
+  color:var(--t3);font-family:'DM Sans',sans-serif;font-size:9px;letter-spacing:2px;
+  text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.cm-close:hover{border-color:var(--red-line);color:var(--red);}
+.cm-title{font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:400;
+  letter-spacing:4px;text-transform:uppercase;color:var(--t2);}
+.cm-vw{width:min(760px,90vw);aspect-ratio:16/9;background:var(--ink2);
+  border:1px solid var(--gold-line);border-radius:2px;overflow:hidden;position:relative;}
+.cm-vw video{width:100%;height:100%;object-fit:cover;display:block;}
+.cm-vw-ph{width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;}
+.cm-vw-ph-txt{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
+.cm-live{position:absolute;bottom:10px;left:12px;background:rgba(8,8,8,0.65);
+  backdrop-filter:blur(4px);padding:3px 10px;border-radius:1px;
+  font-size:8px;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(245,245,240,0.35);border:1px solid rgba(245,245,240,0.05);}
+.cm-info{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
+.ci-item{text-align:center;}
+.ci-val{font-size:14px;font-weight:500;color:var(--t);}
+.ci-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-top:2px;}
+.cm-acts{display:flex;gap:8px;}
+.cm-kick{background:var(--orn-dim);border:1px solid var(--orn-line);color:var(--orn);
+  padding:10px 26px;border-radius:2px;font-family:'DM Sans',sans-serif;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.cm-kick:hover{background:rgba(249,115,22,0.14);}
+.cm-ban{background:var(--red-dim);border:1px solid var(--red-line);color:var(--red);
+  padding:10px 26px;border-radius:2px;font-family:'DM Sans',sans-serif;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.cm-ban:hover{background:rgba(239,68,68,0.14);}
+
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.stats{grid-template-columns:1fr 1fr;}.pgrid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lb">
+    <div class="ll">N<span>e</span>xus</div>
+    <div class="lr"></div>
+    <p class="ls">Administration Panel</p>
+    <span class="li-lbl">Access Code</span>
+    <input class="li" type="password" id="pwd" placeholder="· · · · · · · ·" onkeydown="if(event.key==='Enter')login()">
+    <button class="lbtn" onclick="login()">Enter</button>
+    <p class="lerr" id="lerr">Invalid access code</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="ah">
+    <div class="ah-logo">N<span>e</span>xus</div>
+    <div class="ah-sep"></div>
+    <div class="ah-tag">Administration</div>
+    <div class="ah-r">
+      <div class="ldot"></div>
+      <span class="ah-online" id="h-online">0 online</span>
+      <button class="ah-logout" onclick="logout()">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="ac">
+    <!-- STATS -->
+    <div class="stats">
+      <div class="sc hi"><div class="sc-l">Online</div><div class="sc-v gd" id="s-online">0</div><div class="sc-s">Active sessions</div></div>
+      <div class="sc"><div class="sc-l">Active Pairs</div><div class="sc-v gr" id="s-pairs">0</div><div class="sc-s">In conversation</div></div>
+      <div class="sc"><div class="sc-l">Waiting</div><div class="sc-v" id="s-wait">0</div><div class="sc-s">In queue</div></div>
+      <div class="sc"><div class="sc-l">VIP Users</div><div class="sc-v gd" id="s-vip">0</div><div class="sc-s">Premium access</div></div>
+      <div class="sc"><div class="sc-l">Banned IPs</div><div class="sc-v rd" id="s-banned">0</div><div class="sc-s">Permanent bans</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div>
+      <div class="tabs">
+        <div class="tab on" onclick="switchTab('users',this)">Participants</div>
+        <div class="tab" onclick="switchTab('reports',this)">Reports</div>
+        <div class="tab" onclick="switchTab('vip',this)">VIP Tokens</div>
+      </div>
+
+      <!-- PARTICIPANTS TAB -->
+      <div class="tp on" id="tab-users">
+        <div class="shdr">
+          <div class="st">Participants</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="sc2" id="users-count">0 connected</div>
+            <select class="view-sel" id="vmode" onchange="renderUsers()">
+              <option value="grid">Grid View</option>
+              <option value="table">Table View</option>
+            </select>
+          </div>
+        </div>
+        <div id="users-container"><div class="empty">No participants connected</div></div>
+      </div>
+
+      <!-- REPORTS TAB -->
+      <div class="tp" id="tab-reports">
+        <div class="shdr">
+          <div class="st">Reported Users</div>
+          <div class="sc2" id="reports-count">0 reports</div>
+        </div>
+        <div id="reports-list"><div class="empty">No reports received</div></div>
+      </div>
+
+      <!-- VIP TAB -->
+      <div class="tp" id="tab-vip">
+        <div class="vgb">
+          <div class="vgt">Generate VIP Token</div>
+          <div class="vgs">Single-use access tokens for premium users</div>
+          <div class="vgr">
+            <select class="vgsel" id="plan-sel">
+              <option value="monthly">Monthly — 30 days</option>
+              <option value="yearly">Yearly — 365 days</option>
+            </select>
+            <button class="vgbtn" onclick="genVip()">Generate</button>
+          </div>
+          <div class="vgres" id="tok-res">
+            <div class="vgrl">New Token — Copy Now</div>
+            <div class="vgrc" id="tok-code"></div>
+            <div class="vgrm" id="tok-meta"></div>
+          </div>
+        </div>
+        <div class="shdr">
+          <div class="st">Token History</div>
+          <div class="sc2" id="vip-count">0 tokens</div>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Token</th><th>Plan</th><th>Expires</th><th>Status</th></tr></thead>
+            <tbody id="vip-tbody"><tr><td colspan="4" class="empty">No tokens generated</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="cam-modal">
+  <button class="cm-close" onclick="closeCam()">Close ×</button>
+  <div class="cm-title" id="cm-title">Viewing Participant</div>
+  <div class="cm-vw">
+    <div class="cm-vw-ph" id="cm-ph">
+      <div class="cm-vw-ph-txt">Requesting camera feed...</div>
+    </div>
+    <video id="cm-vid" autoplay playsinline muted style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+    <div class="cm-live">Live</div>
+  </div>
+  <div class="cm-info" id="cm-info"></div>
+  <div class="cm-acts">
+    <button class="cm-kick" id="cm-kick">Kick User</button>
+    <button class="cm-ban" id="cm-ban">Ban IP</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let sk, users=[], reportCount=0, viewingSid=null, peerConns={};
+
+function login(){
+  const p=document.getElementById('pwd').value;
+  const err=document.getElementById('lerr');
+  err.style.display='none';
+  try{
+    sk=io();
+    sk.on('connect_error',()=>{
+      err.style.display='block';
+      err.textContent='Cannot connect — make sure server.js is running:\nnode server.js';
+      sk.disconnect();sk=null;
+    });
+    sk.emit('admin-login',p);
+    sk.on('admin-auth',({success})=>{
+      if(success){
+        document.getElementById('login').style.display='none';
+        document.getElementById('app').classList.add('on');
+        setupAdmin();
+      } else {
+        err.style.display='block';
+        err.textContent='Invalid access code';
+        sk.disconnect();sk=null;
+      }
+    });
+  }catch(e){
+    err.style.display='block';
+    err.textContent='Cannot connect — start node server.js first';
+  }
+}
+
+function logout(){
+  if(sk){sk.disconnect();sk=null;}
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('login').style.display='flex';
+  document.getElementById('pwd').value='';
+}
+
+function setupAdmin(){
+  sk.on('admin-stats',s=>{
+    document.getElementById('s-online').textContent=s.online||0;
+    document.getElementById('s-pairs').textContent=Math.floor(s.active||0);
+    document.getElementById('s-wait').textContent=s.waiting||0;
+    document.getElementById('s-banned').textContent=s.banned||0;
+    document.getElementById('s-vip').textContent=s.vipUsers||0;
+    document.getElementById('h-online').textContent=(s.online||0)+' online';
+  });
+  sk.on('admin-users',list=>{users=list||[];renderUsers();});
+  sk.on('admin-vip-tokens',tokens=>renderVipTokens(tokens||[]));
+  sk.on('admin-report',report=>{
+    reportCount++;
+    document.getElementById('reports-count').textContent=reportCount+' report'+(reportCount!==1?'s':'');
+    addReport(report);
+  });
+  sk.on('admin-ban-success',({socketId})=>{
+    users=users.filter(u=>u.socketId!==socketId);
+    renderUsers();
+    if(viewingSid===socketId)closeCam();
+  });
+  sk.on('admin-view-stream-signal',async({fromSid,data})=>{
+    const pc=peerConns[fromSid];if(!pc)return;
+    if(data.type==='answer')await pc.setRemoteDescription(data);
+    else if(data.candidate)await pc.addIceCandidate(data);
+  });
+  setInterval(()=>{if(sk&&sk.connected)sk.emit('admin-login',document.getElementById('pwd').value);},4000);
+}
+
+function renderUsers(){
+  const c=document.getElementById('users-container');
+  const mode=document.getElementById('vmode').value;
+  document.getElementById('users-count').textContent=users.length+' connected';
+  if(!users.length){c.innerHTML='<div class="empty">No participants connected</div>';return;}
+  mode==='grid'?renderGrid(c):renderTableView(c);
+}
+
+function getStatus(u){return u.inPair?'active':(u.waiting?'waiting':'idle');}
+function getDur(u){const d=Math.floor((Date.now()-u.connectedAt)/1000);return d>=60?Math.floor(d/60)+'m '+(d%60)+'s':d+'s';}
+
+function renderGrid(c){
+  c.innerHTML='';
+  const g=document.createElement('div');g.className='pgrid';
+  users.forEach(u=>{
+    const st=getStatus(u),time=getDur(u);
+    const d=document.createElement('div');
+    d.className='pcard'+(u.reports>0?' flagged':'');
+    d.innerHTML=`
+      <div class="cw" onclick="viewCam('${u.socketId}')">
+        <div class="cph">
+          <div class="cph-sym">${u.gender==='male'?'M':u.gender==='female'?'F':'?'}</div>
+          <div class="cph-txt">Click to view camera</div>
+        </div>
+        <div class="cv-overlay"><span class="cv-btn">View Camera</span></div>
+        <div class="c-badge">${u.socketId.slice(0,10)}···</div>
+        <div class="c-stat"><div class="sdot ${st}"></div>${st}</div>
+        ${u.inPair?`<div class="c-timer">${time}</div>`:''}
+      </div>
+      <div class="pcb">
+        <div class="pcb-row1">
+          <div class="pcb-ip">${u.ip}</div>
+          <div class="pcb-tags">
+            ${u.vip?'<span class="bdg b-vip">VIP</span>':''}
+            ${u.reports>0?`<span class="bdg b-rep">⚑ ${u.reports}</span>`:''}
+          </div>
+        </div>
+        <div class="pcb-meta">
+          <div class="pm">Gender: <strong>${u.gender||'—'}</strong></div>
+          <div class="pm">Country: <strong>${u.country||'—'}</strong></div>
+          <div class="pm">Status: <strong>${st}</strong></div>
+          <div class="pm">Time: <strong>${time}</strong></div>
+        </div>
+        <div class="pc-actions">
+          <button class="abtn view" onclick="viewCam('${u.socketId}')">View</button>
+          <button class="abtn kick" onclick="kick('${u.socketId}')">Kick</button>
+          <button class="abtn ban" onclick="ban('${u.socketId}')">Ban</button>
+        </div>
+      </div>`;
+    g.appendChild(d);
+  });
+  c.appendChild(g);
+}
+
+function renderTableView(c){
+  c.innerHTML=`<div class="tw"><table>
+    <thead><tr><th>Session</th><th>IP</th><th>Gender</th><th>Country</th><th>Status</th><th>VIP</th><th>Reports</th><th>Duration</th><th>Actions</th></tr></thead>
+    <tbody>${users.map(u=>{
+      const st=getStatus(u),time=getDur(u);
+      return `<tr>
+        <td class="mn">${u.socketId.slice(0,14)}···</td>
+        <td class="mn">${u.ip}</td><td>${u.gender||'—'}</td><td>${u.country||'—'}</td>
+        <td><span class="bdg b-${st}">${st}</span></td>
+        <td>${u.vip?'<span class="bdg b-vip">VIP</span>':'—'}</td>
+        <td>${u.reports>0?`<span class="bdg b-rep">⚑ ${u.reports}</span>`:'—'}</td>
+        <td style="color:var(--t3)">${time}</td>
+        <td><div style="display:flex;gap:4px;">
+          <button class="abtn view" style="padding:5px 8px;font-size:8px;" onclick="viewCam('${u.socketId}')">View</button>
+          <button class="abtn kick" onclick="kick('${u.socketId}')">Kick</button>
+          <button class="abtn ban" onclick="ban('${u.socketId}')">Ban</button>
+        </div></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+async function viewCam(sid){
+  const u=users.find(x=>x.socketId===sid);if(!u)return;
+  viewingSid=sid;
+  const st=getStatus(u),time=getDur(u);
+  document.getElementById('cm-title').textContent='Session · '+sid.slice(0,16)+'···';
+  document.getElementById('cm-ph').style.display='flex';
+  document.getElementById('cm-vid').style.display='none';
+  document.getElementById('cam-modal').classList.add('on');
+  document.getElementById('cm-info').innerHTML=`
+    <div class="ci-item"><div class="ci-val">${u.ip}</div><div class="ci-lbl">IP Address</div></div>
+    <div class="ci-item"><div class="ci-val">${u.gender||'—'}</div><div class="ci-lbl">Gender</div></div>
+    <div class="ci-item"><div class="ci-val">${u.country||'—'}</div><div class="ci-lbl">Country</div></div>
+    <div class="ci-item"><div class="ci-val">${st}</div><div class="ci-lbl">Status</div></div>
+    <div class="ci-item"><div class="ci-val">${time}</div><div class="ci-lbl">Duration</div></div>
+    <div class="ci-item"><div class="ci-val">${u.reports||0}</div><div class="ci-lbl">Reports</div></div>`;
+  document.getElementById('cm-kick').onclick=()=>{kick(sid);closeCam();};
+  document.getElementById('cm-ban').onclick=()=>{ban(sid);closeCam();};
+  // Request WebRTC stream via server relay
+  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+  peerConns[sid]=pc;
+  pc.ontrack=e=>{
+    const v=document.getElementById('cm-vid');
+    v.srcObject=e.streams[0];v.style.display='block';
+    document.getElementById('cm-ph').style.display='none';
+  };
+  pc.onicecandidate=e=>{if(e.candidate)sk.emit('admin-view-stream',{targetSid:sid,data:{candidate:e.candidate}});};
+  const offer=await pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
+  await pc.setLocalDescription(offer);
+  sk.emit('admin-view-stream',{targetSid:sid,data:offer});
+}
+
+function closeCam(){
+  document.getElementById('cam-modal').classList.remove('on');
+  const v=document.getElementById('cm-vid');v.srcObject=null;v.style.display='none';
+  if(viewingSid&&peerConns[viewingSid]){peerConns[viewingSid].close();delete peerConns[viewingSid];}
+  viewingSid=null;
+}
+
+function kick(id){
+  if(!confirm('Remove this user?'))return;
+  sk.emit('admin-kick',id);
+  users=users.filter(u=>u.socketId!==id);renderUsers();
+}
+function ban(id){
+  if(!confirm('Permanently ban this IP?'))return;
+  sk.emit('admin-ban',id);
+}
+
+function addReport(r){
+  const c=document.getElementById('reports-list');
+  if(c.querySelector('.empty'))c.innerHTML='';
+  const d=document.createElement('div');d.className='rcard';
+  d.innerHTML=`
+    <div>
+      <div class="ri">Report #${reportCount} — ${r.socketId.slice(0,16)}···</div>
+      <div class="rm">IP: ${r.ip} · Total reports: ${r.reports}</div>
+    </div>
+    <div class="ra">
+      <button class="abtn view" style="flex:none;padding:5px 10px;font-size:8px;" onclick="viewCam('${r.socketId}')">View</button>
+      <button class="abtn kick" onclick="kick('${r.socketId}')">Kick</button>
+      <button class="abtn ban" onclick="ban('${r.socketId}')">Ban</button>
+    </div>`;
+  c.prepend(d);
+}
+
+function genVip(){
+  const plan=document.getElementById('plan-sel').value;
+  sk.emit('admin-generate-vip',{plan});
+  sk.once('admin-vip-generated',({token,plan})=>{
+    document.getElementById('tok-res').style.display='block';
+    document.getElementById('tok-code').textContent=token;
+    document.getElementById('tok-meta').textContent='Plan: '+plan+' · '+new Date().toLocaleTimeString();
+  });
+}
+
+function renderVipTokens(tokens){
+  const t=document.getElementById('vip-tbody');
+  document.getElementById('vip-count').textContent=tokens.length+' token'+(tokens.length!==1?'s':'');
+  if(!tokens.length){t.innerHTML='<tr><td colspan="4" class="empty">No tokens generated</td></tr>';return;}
+  t.innerHTML=tokens.map(tk=>`<tr>
+    <td class="mn" style="color:var(--gold2);letter-spacing:1px;">${tk.token}</td>
+    <td style="text-transform:capitalize;">${tk.plan}</td>
+    <td style="color:var(--t3)">${new Date(tk.expiresAt).toLocaleDateString()}</td>
+    <td><span class="bdg ${tk.used?'b-used':'b-free'}">${tk.used?'Used':'Available'}</span></td>
+  </tr>`).join('');
+}
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');document.getElementById('tab-'+name).classList.add('on');
+}
+</script>
+</body>
+</html>
