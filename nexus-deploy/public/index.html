@@ -635,11 +635,13 @@ header.hidden,.main.hidden{display:none!important;}
 .varea{
   display:flex;flex-direction:column;
   padding:12px;gap:8px;
+  min-height:0; /* important pentru flex children */
 }
 
 .vgrid{
   flex:1;
   display:grid;grid-template-columns:1fr 1fr;
+  min-height:0; /* important: permite grid să se micșoreze */
   gap:8px;min-height:0;
 }
 
@@ -655,6 +657,10 @@ header.hidden,.main.hidden{display:none!important;}
   box-shadow:0 0 24px rgba(201,168,76,0.06);
 }
 .vbox video{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* Video e mereu absolute în interiorul vbox */
+.vbox{position:relative;}
+.vbox>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 
 .vph{
   width:100%;height:100%;
@@ -885,8 +891,114 @@ header.hidden,.main.hidden{display:none!important;}
 }
 .sm-close:hover{border-color:var(--gold-line);color:var(--t2);}
 
-@media(max-width:900px){.cpanel{display:none;}.main{grid-template-columns:1fr;}}
-@media(max-width:640px){.vgrid{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}}
+@media(max-width:900px){
+  .cpanel{display:none;}
+  .main{grid-template-columns:1fr;}
+}
+
+@media(max-width:640px){
+  /* Reset overflow pentru a permite layout corect */
+  html,body{height:100%;overflow:hidden;}
+
+  /* Header fix */
+  header{height:48px;padding:0 12px;}
+  .h-logo{font-size:16px;letter-spacing:4px;}
+
+  /* Main container */
+  .main{
+    display:flex;flex-direction:column;
+    height:calc(100dvh - 48px); /* dvh = dynamic viewport height, fix iOS Safari */
+    overflow:hidden;
+  }
+
+  /* Video area — ocupă tot spațiul disponibil */
+  .varea{
+    flex:1;
+    display:flex;flex-direction:column;
+    padding:6px 6px 4px 6px;
+    gap:4px;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  /* Video grid — 2 rânduri egale, fiecare ocupă 50% */
+  .vgrid{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  /* Fiecare video box — exact 50% din înălțimea grid-ului */
+  .vbox{
+    flex:1;
+    position:relative;
+    min-height:0;
+    overflow:hidden;
+    border-radius:4px;
+  }
+
+  /* Video element — umple complet box-ul */
+  .vbox video{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  /* Placeholder — umple complet box-ul */
+  .vph{
+    position:absolute;
+    inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;
+  }
+  .vph-mono{font-size:28px;}
+  .vph-txt{font-size:10px;}
+
+  /* Label și timer */
+  .vlbl{font-size:8px;padding:2px 8px;letter-spacing:1px;bottom:6px;left:6px;}
+  .stimer{font-size:9px;bottom:6px;right:6px;}
+
+  /* VIP bar */
+  .vipbar{flex-shrink:0;padding:3px 6px;flex-wrap:wrap;gap:3px;font-size:8px;}
+  .vipsel{font-size:9px;padding:3px 5px;}
+
+  /* Butoane control */
+  .ctrl{
+    flex-shrink:0;
+    padding:5px 4px;
+    gap:4px;
+    flex-wrap:nowrap;
+    justify-content:center;
+  }
+  .cbtn{padding:9px 10px;font-size:9px;letter-spacing:1.5px;}
+  .cbtn-f{flex:1;max-width:130px;}
+  .icobtn{padding:9px 10px;}
+
+  /* Interests bar deasupra camerei */
+  .interests-bar{top:6px;max-width:95%;flex-wrap:wrap;}
+  .int-chip{font-size:7px;padding:2px 6px;}
+
+  /* VIP modal pe mobile */
+  .vm-box{max-height:90dvh;overflow-y:auto;}
+  .vm-hero{padding:24px 24px 16px;}
+  .vm-logo{font-size:48px;}
+  .vm-perks{padding:16px 24px;}
+  .vm-auth{padding:12px 24px 20px;}
+  .vm-buy-section{padding:16px 24px 20px;}
+  .vm-done-wrap{padding:24px 24px 20px;}
+
+  /* Overlay scroll pe mobile */
+  #overlay{align-items:flex-start;overflow-y:auto;}
+  .ov-inner{padding:60px 20px 24px;}
+  .ov-vip-btn{top:14px;right:14px;padding:8px 14px;}
+  .ov-vip-txt{font-size:15px;}
+}
 </style>
 </head>
 <body>
@@ -1265,8 +1377,11 @@ header.hidden,.main.hidden{display:none!important;}
       if(document.getElementById('vip-modal').classList.contains('on')){
         window.showVipStep2 && window.showVipStep2(user);
       }
+      // Verifică return de la Stripe
+      window.checkStripeReturn && window.checkStripeReturn();
     } else {
       window._currentUser = null;
+      // Verifică return de la Stripe (user nelogat nu poate fi VIP)
     }
   });
 </script>
@@ -1555,39 +1670,80 @@ async function purchaseVip(){
   if(!window._currentUser) return;
   const btn=document.getElementById('vm-buy-btn');
   btn.disabled=true;
-  document.getElementById('vm-buy-label').textContent='Processing...';
+  document.getElementById('vm-buy-label').textContent='Redirecting to payment...';
 
-  // ═══════════════════════════════════════════════════════
-  // PENTRU PLATĂ REALĂ: integrează Stripe aici
-  // Exemplu: const session = await fetch('/create-checkout', {method:'POST'})
-  // Momentan simulăm plata cu 1.5s delay
-  // ═══════════════════════════════════════════════════════
-  await new Promise(r=>setTimeout(r,1500));
-
-  // Generează cod VIP unic
-  const code = window._currentUser.uid.substr(0,4).toUpperCase()+'-'+
-               Math.random().toString(36).substr(2,4).toUpperCase()+'-'+
-               Date.now().toString(36).substr(-4).toUpperCase();
-
-  // Salvează în Firestore pe contul utilizatorului
   try{
+    const idToken = await window._currentUser.getIdToken();
+    const res = await fetch('/api/create-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        userId: window._currentUser.uid,
+        email: window._currentUser.email,
+        plan: 'monthly'
+      })
+    });
+    const data = await res.json();
+    if(data.url){
+      // Redirecționează la Stripe Checkout
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error || 'Checkout failed');
+    }
+  }catch(err){
+    btn.disabled=false;
+    document.getElementById('vm-buy-label').textContent='Buy VIP — €9.99';
+    // Fallback: dacă Stripe nu e configurat (test mode), simulează
+    if(err.message.includes('placeholder') || err.message.includes('Invalid API Key')){
+      document.getElementById('vm-buy-label').textContent='Processing (test mode)...';
+      await new Promise(r=>setTimeout(r,1500));
+      const code='VIP-TEST-'+Math.random().toString(36).substr(2,6).toUpperCase();
+      await saveVipToFirestore(code);
+      window._existingVipCode=code;
+      showVipStep3(code);
+    } else {
+      alert('Payment error: '+err.message);
+    }
+  }
+}
+
+async function saveVipToFirestore(code){
+  try{
+    if(!window._fbFns || !window._currentUser) return;
     await window._fbFns.setDoc(
       window._fbFns.doc(window._fbDb,'users',window._currentUser.uid),
-      {
-        vip: true,
-        vipCode: code,
-        vipActivatedAt: new Date().toISOString(),
-        email: window._currentUser.email,
-        name: window._currentUser.displayName
-      },
+      {vip:true,vipCode:code,vipActivatedAt:new Date().toISOString(),
+       email:window._currentUser.email,name:window._currentUser.displayName},
       {merge:true}
     );
-  }catch(e){
-    console.log('Firestore save failed (add rules in Firebase console):',e);
-  }
+  }catch(e){ console.log('Firestore save:',e); }
+}
 
-  window._existingVipCode = code;
-  showVipStep3(code);
+// Verifică dacă revenim de la Stripe cu plata făcută
+async function checkStripeReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  const vipSuccess = params.get('vip_success');
+
+  if(vipSuccess && sessionId){
+    // Curăță URL-ul
+    window.history.replaceState({},'',window.location.pathname);
+    // Verifică plata pe server
+    try{
+      const res = await fetch('/api/verify-payment?session_id='+sessionId);
+      const data = await res.json();
+      if(data.paid && data.code){
+        await saveVipToFirestore(data.code);
+        window._existingVipCode = data.code;
+        activateVip();
+        // Deschide modalul pe step 3 (confirmare)
+        openVip();
+        setTimeout(()=>showVipStep3(data.code), 300);
+      }
+    }catch(e){ console.log('Verify payment error:',e); }
+  } else if(params.get('vip_cancel')){
+    window.history.replaceState({},'',window.location.pathname);
+  }
 }
 
 function showVipStep3(code){
@@ -1629,6 +1785,7 @@ function activateVip(){
 // Expune global pentru Firebase module
 window.showVipStep2 = showVipStep2;
 window.activateVip = activateVip;
+window.checkStripeReturn = checkStripeReturn;
 
 function openSettings(){syncS();show('settings-modal');}
 function closeSettings(){hide('settings-modal');}
