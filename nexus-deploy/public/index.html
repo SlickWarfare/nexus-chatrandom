@@ -1634,44 +1634,42 @@ function syncS(){
 }
 
 function launch(){
-  // 1. ÎNTÂI ascunde overlay-ul și arată pagina — NU bloca UI cu await
   if(sk) sk.emit('set-profile',{gender:myG,wantGender:myW});
   document.getElementById('overlay').style.display='none';
   document.querySelector('header').classList.remove('hidden');
   document.querySelector('.main').classList.remove('hidden');
 
-  // 2. Cere camera ASINCRON — nu blochează intrarea
-  _startCamera();
-
-  // 3. Auto-find după 500ms (timp să pornească camera)
-  setTimeout(()=>findP(), 500);
+  // Porneste camera INTAI, cauta partener DUPA ce camera e gata (sau dupa 3s timeout)
+  _startCamera().then(()=>{
+    findP();
+  }).catch(()=>{
+    findP(); // cauta si fara camera (text-only)
+  });
 }
 
 async function _startCamera(){
-  // Încearcă video+audio
-  const constraints = [
-    {video:true, audio:true},
-    {video:{facingMode:'user'}, audio:true},
-    {video:true, audio:false},
-    {video:false, audio:true}
+  const constraints=[
+    {video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:{echoCancellation:true,noiseSuppression:true}},
+    {video:true,audio:true},
+    {video:true,audio:false},
+    {video:false,audio:true}
   ];
   for(const c of constraints){
     try{
-      ls = await navigator.mediaDevices.getUserMedia(c);
-      if(ls.getVideoTracks().length > 0){
+      ls=await navigator.mediaDevices.getUserMedia(c);
+      if(ls.getVideoTracks().length>0){
         const v=document.getElementById('vid-y');
-        v.srcObject=ls;
-        v.style.display='block';
+        v.srcObject=ls;v.style.display='block';
         v.play().catch(()=>{});
         document.getElementById('ph-y').style.display='none';
         document.getElementById('vbox-y').classList.add('live');
       }
       return; // succes
     }catch(e){
-      console.log('Camera attempt failed:',c,e.message);
+      console.log('Camera attempt:',e.message);
     }
   }
-  sys('⚠ Camera/Mic unavailable — check browser permissions');
+  sys('⚠ Camera/Mic unavailable');
 }
 
 function findP(){
@@ -1731,8 +1729,14 @@ async function handleSignal(d){
 async function setupPC(init){
   pc=new RTCPeerConnection(ICE);
 
-  // Adauga trackurile locale
-  if(ls) ls.getTracks().forEach(t=>pc.addTrack(t,ls));
+  // Adauga trackurile locale la PC
+  if(ls && ls.getTracks().length>0){
+    ls.getTracks().forEach(t=>pc.addTrack(t,ls));
+  } else {
+    // Fara camera — adauga transceivers recvonly ca sa putem PRIMI video/audio
+    pc.addTransceiver('video',{direction:'recvonly'});
+    pc.addTransceiver('audio',{direction:'recvonly'});
+  }
 
   // Primeste video/audio de la strain
   pc.ontrack=e=>{
@@ -1765,12 +1769,7 @@ async function setupPC(init){
   };
 
   if(init){
-    // Daca nu avem tracks, adauga transceivers receive-only ca SDP sa aiba m= lines
-    if(!ls || ls.getTracks().length===0){
-      pc.addTransceiver('audio',{direction:'recvonly'});
-      pc.addTransceiver('video',{direction:'recvonly'});
-    }
-    const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
+    const offer=await pc.createOffer();
     await pc.setLocalDescription(offer);
     sk.emit('signal',{type:offer.type,sdp:offer.sdp});
   }
