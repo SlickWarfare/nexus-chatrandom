@@ -1485,18 +1485,14 @@ const ICE={
   iceServers:[
     {urls:'stun:stun.l.google.com:19302'},
     {urls:'stun:stun1.l.google.com:19302'},
-    {urls:'stun:stun2.l.google.com:19302'},
     {urls:'stun:stun.relay.metered.ca:80'},
     {urls:'turn:global.relay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
     {urls:'turn:global.relay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:global.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:a.relay.metered.ca:80',username:'e6d2a8b8e1abaa520e22def9',credential:'HCmDqVwHaIQxbH7I'},
-    {urls:'turn:a.relay.metered.ca:443',username:'e6d2a8b8e1abaa520e22def9',credential:'HCmDqVwHaIQxbH7I'},
-    {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'e6d2a8b8e1abaa520e22def9',credential:'HCmDqVwHaIQxbH7I'}
-  ],
-  iceCandidatePoolSize:10
+    {urls:'turn:global.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+  ]
 };
 let pendingCandidates=[];
+let pendingSignals=[];  // buffereaza semnale care vin inainte de setupPC
 let sk;
 try{sk=io();setup();}catch(e){}
 
@@ -1509,6 +1505,7 @@ function setup(){
     hide('waiting');
     conn=true;
     pendingCandidates=[];
+    pendingSignals=[];
     document.getElementById('bnext').disabled=false;
     document.getElementById('brep').disabled=false;
     document.getElementById('vbox-s').classList.add('live');
@@ -1520,36 +1517,18 @@ function setup(){
     if(bits.length){tag.textContent=bits.join(' · ');tag.style.display='block';}
     setSt(true);sys('— Connected —');startT();
     await setupPC(initiator);
+    // Proceseaza semnale care au venit inainte ca pc sa fie gata
+    const toProcess=[...pendingSignals];
+    pendingSignals=[];
+    for(const d of toProcess) await handleSignal(d);
   });
+
   sk.on('signal',async d=>{
-    if(!pc)return;
-    try{
-      if(d.type==='offer'){
-        await pc.setRemoteDescription(new RTCSessionDescription(d));
-        // Flush pending candidates
-        for(const c of pendingCandidates){
-          try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
-        }
-        pendingCandidates=[];
-        const a=await pc.createAnswer({offerToReceiveAudio:true,offerToReceiveVideo:true});
-        await pc.setLocalDescription(a);
-        sk.emit('signal',a);
-      } else if(d.type==='answer'){
-        await pc.setRemoteDescription(new RTCSessionDescription(d));
-        // Flush pending candidates
-        for(const c of pendingCandidates){
-          try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
-        }
-        pendingCandidates=[];
-      } else if(d.candidate){
-        if(pc.remoteDescription && pc.remoteDescription.type){
-          try{await pc.addIceCandidate(new RTCIceCandidate(d));}catch(e){}
-        } else {
-          pendingCandidates.push(d); // queue until remote desc is set
-        }
-      }
-    }catch(err){console.warn('Signal error:',err);}
+    // Daca pc nu e inca gata, buffereza
+    if(!pc){pendingSignals.push(d);return;}
+    await handleSignal(d);
   });
+
   sk.on('chat-message',({text})=>addM(text,'stranger'));
   sk.on('typing',()=>showTyp());
   sk.on('partner-left',()=>{sys('— Stranger disconnected —');cleanPC();rst();});
@@ -1715,19 +1694,53 @@ function rst(){
   setSt(false);
 }
 
+async function handleSignal(d){
+  if(!pc) return;
+  try{
+    if(d.type==='offer'){
+      await pc.setRemoteDescription(new RTCSessionDescription(d));
+      // Flush buffered candidates
+      for(const c of pendingCandidates){
+        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(_){}
+      }
+      pendingCandidates=[];
+      const ans=await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      sk.emit('signal',{type:ans.type,sdp:ans.sdp});
+    } else if(d.type==='answer'){
+      await pc.setRemoteDescription(new RTCSessionDescription(d));
+      for(const c of pendingCandidates){
+        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(_){}
+      }
+      pendingCandidates=[];
+    } else if(d.candidate!==undefined){
+      const cand=new RTCIceCandidate({
+        candidate:d.candidate,
+        sdpMid:d.sdpMid,
+        sdpMLineIndex:d.sdpMLineIndex
+      });
+      if(pc.remoteDescription && pc.remoteDescription.type){
+        try{await pc.addIceCandidate(cand);}catch(_){}
+      } else {
+        pendingCandidates.push(d);
+      }
+    }
+  }catch(err){console.warn('Signal err:',err);}
+}
+
 async function setupPC(init){
   pc=new RTCPeerConnection(ICE);
-  if(ls)ls.getTracks().forEach(t=>pc.addTrack(t,ls));
 
-  // Fix robust: streams[0] sau MediaStream manual
+  // Adauga trackurile locale
+  if(ls) ls.getTracks().forEach(t=>pc.addTrack(t,ls));
+
+  // Primeste video/audio de la strain
   pc.ontrack=e=>{
     const v=document.getElementById('vid-s');
-    if(e.streams && e.streams[0]){
+    if(e.streams&&e.streams[0]){
       v.srcObject=e.streams[0];
     } else {
-      if(!v.srcObject || !(v.srcObject instanceof MediaStream)){
-        v.srcObject=new MediaStream();
-      }
+      if(!v.srcObject) v.srcObject=new MediaStream();
       v.srcObject.addTrack(e.track);
     }
     v.style.display='block';
@@ -1735,32 +1748,26 @@ async function setupPC(init){
     v.play().catch(()=>{});
   };
 
+  // Trimite ICE candidates la partener
   pc.onicecandidate=e=>{
-    if(e.candidate) sk.emit('signal', e.candidate.toJSON());
+    if(!e.candidate) return;
+    sk.emit('signal',{
+      candidate:e.candidate.candidate,
+      sdpMid:e.candidate.sdpMid,
+      sdpMLineIndex:e.candidate.sdpMLineIndex
+    });
   };
+
   pc.oniceconnectionstatechange=()=>{
-    const state=pc.iceConnectionState;
-    console.log('ICE state:',state);
-    if(state==='failed'){
-      console.log('ICE failed, restarting...');
-      if(init && pc.restartIce) pc.restartIce();
-    }
-    if(state==='connected'||state==='completed'){
-      sys('— Video connected —');
-    }
-    if(state==='disconnected'){
-      setTimeout(()=>{
-        if(pc && pc.iceConnectionState==='disconnected' && init && pc.restartIce) pc.restartIce();
-      },3000);
-    }
+    const s=pc.iceConnectionState;
+    if(s==='connected'||s==='completed') sys('— Video connected —');
+    if(s==='failed'&&init&&pc.restartIce) pc.restartIce();
   };
-  pc.onconnectionstatechange=()=>{
-    console.log('PC state:',pc.connectionState);
-  };
+
   if(init){
-    const o=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
-    await pc.setLocalDescription(o);
-    sk.emit('signal',o);
+    const offer=await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sk.emit('signal',{type:offer.type,sdp:offer.sdp});
   }
 }
 function cleanPC(){
