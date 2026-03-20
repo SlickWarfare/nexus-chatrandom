@@ -1654,28 +1654,45 @@ function syncS(){
   ['any','male','female'].forEach(x=>document.getElementById('s-gw-'+x)?.classList.toggle('on',x===myW));
 }
 
-async function launch(){
-  try{
-    ls=await navigator.mediaDevices.getUserMedia({
-      video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},
-      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
-    });
-    const v=document.getElementById('vid-y');v.srcObject=ls;v.style.display='block';
-    document.getElementById('ph-y').style.display='none';
-    document.getElementById('vbox-y').classList.add('live');
-  }catch(e){
-    // Fallback fără video dacă camera nu e disponibilă
-    try{
-      ls=await navigator.mediaDevices.getUserMedia({video:false,audio:true});
-    }catch(e2){}
-    sys('Camera unavailable — text only');
-  }
-  if(sk)sk.emit('set-profile',{gender:myG,wantGender:myW});
+function launch(){
+  // 1. ÎNTÂI ascunde overlay-ul și arată pagina — NU bloca UI cu await
+  if(sk) sk.emit('set-profile',{gender:myG,wantGender:myW});
   document.getElementById('overlay').style.display='none';
   document.querySelector('header').classList.remove('hidden');
   document.querySelector('.main').classList.remove('hidden');
-  // AUTO-FIND: caută automat un partener imediat după intrare
-  setTimeout(()=>findP(), 300);
+
+  // 2. Cere camera ASINCRON — nu blochează intrarea
+  _startCamera();
+
+  // 3. Auto-find după 500ms (timp să pornească camera)
+  setTimeout(()=>findP(), 500);
+}
+
+async function _startCamera(){
+  // Încearcă video+audio
+  const constraints = [
+    {video:true, audio:true},
+    {video:{facingMode:'user'}, audio:true},
+    {video:true, audio:false},
+    {video:false, audio:true}
+  ];
+  for(const c of constraints){
+    try{
+      ls = await navigator.mediaDevices.getUserMedia(c);
+      if(ls.getVideoTracks().length > 0){
+        const v=document.getElementById('vid-y');
+        v.srcObject=ls;
+        v.style.display='block';
+        v.play().catch(()=>{});
+        document.getElementById('ph-y').style.display='none';
+        document.getElementById('vbox-y').classList.add('live');
+      }
+      return; // succes
+    }catch(e){
+      console.log('Camera attempt failed:',c,e.message);
+    }
+  }
+  sys('⚠ Camera/Mic unavailable — check browser permissions');
 }
 
 function findP(){
@@ -1719,7 +1736,7 @@ async function setupPC(init){
   };
 
   pc.onicecandidate=e=>{
-    if(e.candidate)sk.emit('signal',{candidate:e.candidate.toJSON()});
+    if(e.candidate) sk.emit('signal', e.candidate.toJSON());
   };
   pc.oniceconnectionstatechange=()=>{
     const state=pc.iceConnectionState;
