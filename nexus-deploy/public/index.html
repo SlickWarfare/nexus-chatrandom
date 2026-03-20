@@ -1482,16 +1482,21 @@ let myG='any',myW='any',isVip=false,myTags=new Set();
 let ls=null,pc=null,conn=false,camOn=true,micOn=true;
 let tInt=null,tSec=0,typT=null;
 let adminPCs={};  // admin camera viewers
-const ICE={
-  iceServers:[
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'},
-    {urls:'stun:stun.relay.metered.ca:80'},
-    {urls:'turn:global.relay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:global.relay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:global.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+// ICE config — se incarca de la server inainte de prima conexiune
+let ICE = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
   ]
 };
+// Fetch ICE servers fresh de la server
+fetch('/api/ice-servers').then(r=>r.json()).then(d=>{ICE=d;}).catch(()=>{});
 let pendingCandidates=[];
 let pendingSignals=[];  // buffereaza semnale care vin inainte de setupPC
 let sk;
@@ -1728,64 +1733,59 @@ async function handleSignal(d){
 }
 
 async function setupPC(init){
-  pc=new RTCPeerConnection(ICE);
+  pc = new RTCPeerConnection(ICE);
 
-  // Adauga trackurile locale la PC
-  if(ls && ls.getTracks().length>0){
-    ls.getTracks().forEach(t=>pc.addTrack(t,ls));
-  } else {
-    // Fara camera — adauga transceivers recvonly ca sa putem PRIMI video/audio
-    pc.addTransceiver('video',{direction:'recvonly'});
-    pc.addTransceiver('audio',{direction:'recvonly'});
+  // Adauga INTOTDEAUNA transceivers sendrecv — ambele parti pot trimite si primi
+  // Daca avem camera, inlocuim track-ul null cu track-ul real
+  const vTransceiver = pc.addTransceiver('video', {direction:'sendrecv'});
+  const aTransceiver = pc.addTransceiver('audio', {direction:'sendrecv'});
+
+  if(ls){
+    const vTrack = ls.getVideoTracks()[0];
+    const aTrack = ls.getAudioTracks()[0];
+    if(vTrack) vTransceiver.sender.replaceTrack(vTrack).catch(()=>{});
+    if(aTrack) aTransceiver.sender.replaceTrack(aTrack).catch(()=>{});
   }
 
   // Primeste video/audio de la strain
-  pc.ontrack=e=>{
-    const v=document.getElementById('vid-s');
-    if(e.streams&&e.streams[0]){
-      v.srcObject=e.streams[0];
+  pc.ontrack = e => {
+    const v = document.getElementById('vid-s');
+    if(e.streams && e.streams[0]){
+      v.srcObject = e.streams[0];
     } else {
-      if(!v.srcObject) v.srcObject=new MediaStream();
+      if(!v.srcObject) v.srcObject = new MediaStream();
       v.srcObject.addTrack(e.track);
     }
-    v.muted=false;  // incearca cu audio
-    v.style.display='block';
-    document.getElementById('ph-s').style.display='none';
-    // Incearca play — daca e blocat de autoplay, fallback la muted
-    const playPromise=v.play();
-    if(playPromise!==undefined){
-      playPromise.catch(()=>{
-        // Browser blocheaza autoplay cu audio — porneste muted
-        v.muted=true;
-        v.play().then(()=>{
-          // Arata buton unmute
-          const ub=document.getElementById('unmute-btn');
-          if(ub) ub.style.display='block';
-        }).catch(()=>{});
-      });
-    }
+    v.muted = false;
+    v.style.display = 'block';
+    document.getElementById('ph-s').style.display = 'none';
+    const pp = v.play();
+    if(pp) pp.catch(()=>{ v.muted=true; v.play().then(()=>{ const ub=document.getElementById('unmute-btn');if(ub)ub.style.display='block';}).catch(()=>{}); });
   };
 
   // Trimite ICE candidates la partener
-  pc.onicecandidate=e=>{
+  pc.onicecandidate = e => {
     if(!e.candidate) return;
-    sk.emit('signal',{
-      candidate:e.candidate.candidate,
-      sdpMid:e.candidate.sdpMid,
-      sdpMLineIndex:e.candidate.sdpMLineIndex
+    sk.emit('signal', {
+      candidate: e.candidate.candidate,
+      sdpMid: e.candidate.sdpMid,
+      sdpMLineIndex: e.candidate.sdpMLineIndex
     });
   };
 
-  pc.oniceconnectionstatechange=()=>{
-    const s=pc.iceConnectionState;
-    if(s==='connected'||s==='completed') sys('— Video connected —');
-    if(s==='failed'&&init&&pc.restartIce) pc.restartIce();
+  pc.oniceconnectionstatechange = () => {
+    const s = pc.iceConnectionState;
+    if(s==='connected'||s==='completed') sys('— Connected —');
+    if(s==='failed') {
+      sys('⚠ Connection failed — retrying...');
+      if(pc.restartIce) pc.restartIce();
+    }
   };
 
   if(init){
-    const offer=await pc.createOffer();
+    const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    sk.emit('signal',{type:offer.type,sdp:offer.sdp});
+    sk.emit('signal', {type: offer.type, sdp: offer.sdp});
   }
 }
 function unmuteStranger(){
