@@ -1263,10 +1263,11 @@ header.hidden,.main.hidden{display:none!important;}
           <div class="vph-mono">?</div>
           <div class="vph-txt">Waiting for stranger</div>
         </div>
-        <video id="vid-s" autoplay playsinline style="display:none"></video>
+        <video id="vid-s" autoplay playsinline muted style="display:none"></video>
         <div class="vlbl">Stranger</div>
         <div class="ptag" id="ptag"></div>
         <div class="stimer" id="stimer">0:00</div>
+        <button id="unmute-btn" onclick="unmuteStranger()" style="display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(201,168,76,0.92);border:none;color:#080808;padding:8px 18px;border-radius:2px;cursor:pointer;font-size:11px;letter-spacing:1px;font-weight:700;">🔊 TAP TO UNMUTE</button>
       </div>
     </div>
 
@@ -1747,9 +1748,22 @@ async function setupPC(init){
       if(!v.srcObject) v.srcObject=new MediaStream();
       v.srcObject.addTrack(e.track);
     }
+    v.muted=false;  // incearca cu audio
     v.style.display='block';
     document.getElementById('ph-s').style.display='none';
-    v.play().catch(()=>{});
+    // Incearca play — daca e blocat de autoplay, fallback la muted
+    const playPromise=v.play();
+    if(playPromise!==undefined){
+      playPromise.catch(()=>{
+        // Browser blocheaza autoplay cu audio — porneste muted
+        v.muted=true;
+        v.play().then(()=>{
+          // Arata buton unmute
+          const ub=document.getElementById('unmute-btn');
+          if(ub) ub.style.display='block';
+        }).catch(()=>{});
+      });
+    }
   };
 
   // Trimite ICE candidates la partener
@@ -1774,12 +1788,20 @@ async function setupPC(init){
     sk.emit('signal',{type:offer.type,sdp:offer.sdp});
   }
 }
+function unmuteStranger(){
+  const v=document.getElementById('vid-s');
+  v.muted=false;
+  v.play().catch(()=>{});
+  document.getElementById('unmute-btn').style.display='none';
+}
 function cleanPC(){
   if(pc){pc.close();pc=null;}
   pendingCandidates=[];
   const v=document.getElementById('vid-s');
   v.srcObject=null;v.style.display='none';
   document.getElementById('ph-s').style.display='flex';
+  const ub=document.getElementById('unmute-btn');
+  if(ub) ub.style.display='none';
 }
 
 function tCam(){if(!ls)return;camOn=!camOn;ls.getVideoTracks().forEach(t=>t.enabled=camOn);const b=document.getElementById('bcam');b.textContent=camOn?'📷':'🚫';b.classList.toggle('off',!camOn);}
