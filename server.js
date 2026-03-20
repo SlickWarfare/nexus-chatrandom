@@ -138,29 +138,34 @@ app.post('/api/redeem-vip', (req, res) => {
   res.json({ success: true, plan: vip.plan, expiresAt: vip.expiresAt });
 });
 
-// ICE servers endpoint — credentiale TURN pentru conexiuni cross-network
-app.get('/api/ice-servers', (req, res) => {
+// ICE servers endpoint — foloseste Metered API daca exista API key
+app.get('/api/ice-servers', async (req, res) => {
+  const meteredApiKey = process.env.METERED_API_KEY;
+  const meteredDomain = process.env.METERED_DOMAIN || 'nexus-chatrandom';
+
+  if(meteredApiKey){
+    try {
+      const response = await fetch(`https://${meteredDomain}.metered.live/api/v1/turn/credentials?apiKey=${meteredApiKey}`);
+      const iceServers = await response.json();
+      return res.json({ iceServers });
+    } catch(e) {
+      console.log('Metered API failed, using fallback:', e.message);
+    }
+  }
+
+  // Fallback cu mai multi provideri
   res.json({
     iceServers: [
-      // STUN servers — Google (fiabile)
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      // STUN Cloudflare
+      { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302','stun:stun3.l.google.com:19302','stun:stun4.l.google.com:19302'] },
       { urls: 'stun:stun.cloudflare.com:3478' },
-      // TURN OpenRelay (metered.ca) — toate variantele
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      // TURN Global relay
-      { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turns:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      // TURN fr-turn2 (Europa)
-      { urls: 'turn:fr-turn2.xirsys.com:80?transport=udp', username: 'Cj9HJQXi0qEsK_NeGDJYGmkr2GOInEQ8xNEp4M3VwkNuekj_DjcS7PAkXX3OEy0zAAAAAGR5_7ptZXRlcmVk', credential: 'f0a5cd76-e2b8-11ee-9e22-0242ac120004' },
+      { urls: 'turn:openrelay.metered.ca:80',               username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp',username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turns:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:relay1.expressturn.com:3478',           username: 'efMFIN2LTIQPXXFBHM', credential: 'IoQLBMMhYm7oAECJ' },
+      { urls: 'turn:relay1.expressturn.com:3480',           username: 'efMFIN2LTIQPXXFBHM', credential: 'IoQLBMMhYm7oAECJ' },
+      { urls: 'turn:freeturn.net:3478',                     username: 'free', credential: 'free' },
+      { urls: 'turns:freeturn.net:5349',                    username: 'free', credential: 'free' },
     ]
   });
 });
